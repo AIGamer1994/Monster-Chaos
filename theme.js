@@ -41,6 +41,9 @@
     background-repeat: no-repeat;
   }
 
+  /* ── A–F 區古風字體（只設在區塊根節點讓子層繼承，Font Awesome 圖示不受影響）── */
+  .gufeng { font-family: 'LXGW WenKai TC', 'Kaiti TC', 'STKaiti', 'DFKai-SB', 'BiauKai', 'Noto Serif TC', 'Songti TC', serif; }
+
   /* 手牌選中動畫 */
   .hand-card {
       transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
@@ -74,6 +77,14 @@
     document.head.appendChild(st);
   }
 
+  if (!document.getElementById('ui-theme-font')) {
+    const lk = document.createElement('link');
+    lk.id = 'ui-theme-font';
+    lk.rel = 'stylesheet';
+    lk.href = 'https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap';
+    document.head.appendChild(lk);
+  }
+
   const UI = {
   // ═══════════════ 外層容器（整個牌桌畫面、手機寬度容器） ═══════════════
   root: {
@@ -86,7 +97,7 @@
   // ═══════════════ A 區｜版本設定區 ═══════════════
   A: {
     // <header>
-    a01: "h-[4.5%] min-h-[32px] bg-slate-900/50 backdrop-blur border-b border-cyan-900/40 px-3 flex items-center justify-between z-[80] shrink-0",
+    a01: "gufeng h-[4.5%] min-h-[32px] bg-slate-900/50 backdrop-blur border-b border-cyan-900/40 px-3 flex items-center justify-between z-[80] shrink-0",
     // <div>
     a02: "flex items-center",
     // <span>
@@ -118,7 +129,7 @@
   // ═══════════════ B 區｜動態區 ═══════════════
   B: {
     // <div>
-    b01: "shrink-0 px-2 py-1 border-b border-slate-800/80 z-[70]",
+    b01: "gufeng shrink-0 px-2 py-1 z-[70]",
     // <div>
     b02: ({ broadcastEvent }) => `w-full bg-slate-900/75 border px-2 py-1 rounded-lg shadow flex items-stretch gap-1.5 min-h-[36px] ${broadcastEvent ? (broadcastEvent.type === 'out' ? 'event-out' : 'event-revive') : 'border-emerald-500/50'}`,
     // <div>
@@ -158,7 +169,7 @@
   // ═══════════════ C 區｜牌庫數目區 ═══════════════
   C: {
     // <div>
-    c01: "shrink-0 px-2 py-1 border-b border-slate-800/80 flex items-center justify-between gap-1 z-[70]",
+    c01: "gufeng shrink-0 px-2 py-1 flex items-center justify-between gap-1 z-[70]",
     // <div>
     c02: "flex items-center space-x-1 bg-slate-900/90 border border-amber-500/40 px-2 py-0.5 rounded-full text-[9.5px] shadow",
     // <i> icon:moon
@@ -198,7 +209,7 @@
   // ═══════════════ D 區｜其他玩家 ═══════════════
   D: {
     // <section> 「出局';」
-    d01: "shrink-0 border-b border-slate-800/80 px-1 py-0.5 flex items-center overflow-hidden gap-1",
+    d01: "gufeng shrink-0 px-1 py-0.5 flex items-center overflow-hidden gap-1",
     // <div>
     d02: ({ isDead, isTurn }) => `player-box min-w-0 basis-0 flex-1 bg-slate-800/70 rounded-lg px-0.5 pt-0.5 pb-1.5 flex flex-col items-center justify-center relative transition-all duration-300 ${
                             isTurn ? 'border-2 border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.65)] scale-[1.02]' : 'border border-slate-700/60 opacity-85'
@@ -236,7 +247,7 @@
   // ═══════════════ E 區｜面前區（對手面前牌／出牌動畫區／自己面前牌） ═══════════════
   E: {
     // <main>
-    e01: "flex-1 min-h-0 px-1.5 pt-0 pb-0.5 flex flex-col relative overflow-hidden",
+    e01: "gufeng flex-1 min-h-0 px-1.5 pt-0 pb-0.5 flex flex-col relative overflow-hidden",
     // <div>
     e02: "absolute inset-0 opacity-10 bg-[radial-gradient(#38bdf8_1px,transparent_1px)] [background-size:16px_16px] pointer-events-none",
 
@@ -395,7 +406,7 @@
   // ═══════════════ F 區｜手牌區 ═══════════════
   F: {
     // <footer>
-    f01: "h-[30%] min-h-[210px] border-t border-slate-800 p-2 relative shrink-0 flex items-center justify-center",
+    f01: "gufeng h-[30%] min-h-[210px] p-2 relative shrink-0 flex items-center justify-center",
     // <div>
     f02: "absolute inset-0 z-40 flex items-center justify-center bg-slate-950/90",
     // <button>
