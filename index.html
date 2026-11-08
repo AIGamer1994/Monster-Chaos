@@ -565,8 +565,7 @@
         }
         function FxBack({ cls = 'w-11 h-[60px]', label = '', moonCls = 'text-xs' }) {
           return (
-            <div className={`${cls} rounded-md border-2 border-amber-500/70 bg-gradient-to-br from-indigo-900 to-slate-800 flex flex-col items-center justify-center gap-0.5 shadow`}>
-              <i className={`fa-solid fa-moon text-amber-400/80 ${moonCls}`}></i>
+            <div className={`${cls} card-back flex flex-col items-center justify-center gap-0.5 shadow`}>
               {label && <span className="text-[10px] font-black text-slate-300 leading-none">{label}</span>}
             </div>
           );
@@ -5144,11 +5143,13 @@
                           <span className={UI.E.e61}>{arenaFocus.value}</span>
                           {arenaFocus.isMoon && <span className={UI.E.e62}>{arenaFocus.category || '月亮'}</span>}
                         </div>
+                        <div className={UI.E.e65}>
+                          <h3 className={UI.E.e66}>{arenaFocus.title}</h3>
+                        </div>
                         <div className={UI.E.e63}>
                           <i className={UI.E.e64({ arenaFocus })}></i>
                         </div>
-                        <div className={UI.E.e65}>
-                          <h3 className={UI.E.e66}>{arenaFocus.title}</h3>
+                        <div className={UI.E.e72}>
                           {arenaFocus.desc && <p className={UI.E.e67}>{arenaFocus.desc}</p>}
                         </div>
                         <div className={UI.E.e68}>
@@ -5276,11 +5277,11 @@
                               <div className={UI.F.f40}>
                                 <span className={UI.F.f41({ isSelected })}>{card.value}</span>
                               </div>
+                              <div className={UI.F.f45}>{card.title}</div>
                               <div className={UI.F.f42}>
                                 <i className={UI.F.f43({ card })}></i>
                               </div>
                               <div className={UI.F.f44}>
-                                <div className={UI.F.f45}>{card.title}</div>
                                 <div className={UI.F.f46}>{card.desc}</div>
                               </div>
                             </div>
@@ -5312,11 +5313,11 @@
                                     <div className={UI.F.f55}>
                                       <span className={UI.F.f56}>{c.value}</span>
                                     </div>
+                                    <div className={UI.F.f60}>{c.title}</div>
                                     <div className={UI.F.f57}>
                                       <i className={UI.F.f58({ c })}></i>
                                     </div>
                                     <div className={UI.F.f59}>
-                                      <div className={UI.F.f60}>{c.title}</div>
                                       <div className={UI.F.f61}>{c.desc}</div>
                                     </div>
                                   </div>
@@ -5624,16 +5625,16 @@
               {/* 拖曳中的手牌（浮動，不影響版面） */}
               {dragGhost && (
                 <div className="fixed z-[70] pointer-events-none" style={{ left: dragGhost.x, top: dragGhost.y, transform: 'translate(-50%, -60%) rotate(-3deg) scale(0.9)' }}>
-                  <div className={`card-bg w-[130px] h-[190px] bg-slate-900 border p-2 flex flex-col justify-between shadow-2xl ${dragGhost.over ? 'border-emerald-400 shadow-[0_0_22px_rgba(52,211,153,0.7)]' : 'border-red-500'}`}>
-                    <div className="flex justify-between items-center">
-                      <span className="bg-amber-500 text-slate-950 text-sm font-black w-6 h-6 rounded-full flex items-center justify-center font-mono">{dragGhost.card.value}</span>
+                  <div className={`card-bg relative w-[130px] h-[190px] bg-slate-900 p-2 shadow-2xl ${dragGhost.over ? 'shadow-[0_0_22px_rgba(52,211,153,0.7)]' : ''}`}>
+                    <div className="cd-num">
+                      <span className="text-white text-base font-black leading-none font-mono [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.value}</span>
                     </div>
-                    <div className="w-full h-16 bg-slate-800/90 rounded-lg border border-slate-700/60 flex items-center justify-center my-1">
-                      <i className={`fa-solid ${dragGhost.card.icon} text-3xl text-amber-400`}></i>
+                    <div className="cd-title text-[11px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.title}</div>
+                    <div className="cd-icon">
+                      <i className={`fa-solid ${dragGhost.card.icon} text-4xl text-amber-400`}></i>
                     </div>
-                    <div className="text-center">
-                      <div className="text-xs font-black text-slate-100 truncate">{dragGhost.card.title}</div>
-                      <div className="text-[8.5px] text-slate-300 line-clamp-3 leading-tight mt-0.5">{dragGhost.card.desc}</div>
+                    <div className="cd-desc">
+                      <div className="w-full text-center text-[8px] leading-[1.2] text-slate-200 line-clamp-4 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.desc}</div>
                     </div>
                   </div>
                 </div>

@@ -55,6 +55,27 @@
     background-repeat: no-repeat;
   }
 
+  /* ── 卡背圖（card.jpg 的背面版：cardb.jpg，同一資料夾）。用在抽牌動畫牌背、C 區動畫的牌背。
+     圖片不存在時退回深藍底色。 */
+  .card-back {
+    background-color: #1e1b4b;
+    background-image: url('cardb.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  /* ── 牌面各元素對齊 card.jpg 的格仔（百分比 = 佔整張 130x190 卡的比例；要微調就改這裡）──
+     cd-num   數字 → 左上紅圈中心
+     cd-title 卡名 → 右上暗紅橫幅
+     cd-icon  圖示 → 中間大黑窗中心
+     cd-desc  說明 → 底部咖啡色底板 
+     使用前提：外層卡片要 position: relative。 */
+  .cd-num   { position:absolute; left:2.8%;  top:2.4%;  width:21.5%; height:14.7%; display:flex; align-items:center; justify-content:center; }
+  .cd-title { position:absolute; left:24.2%; top:5.7%;  width:64.8%; height:7.2%;  display:flex; align-items:center; justify-content:center; overflow:hidden; white-space:nowrap; }
+  .cd-icon  { position:absolute; left:12%;   top:13.9%; width:74.6%; height:46.4%; display:flex; align-items:center; justify-content:center; }
+  .cd-desc  { position:absolute; left:12.5%; top:73.5%; width:74%;   height:19.5%; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; }
+
   /* 手牌選中動畫 */
   .hand-card {
       transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
@@ -384,30 +405,31 @@
     // <div>
     e58: "fixed inset-0 z-[120] flex items-center justify-center bg-black/55",
     // <div>
-    e59: "card-bg relative w-[130px] h-[190px] bg-slate-900 border border-red-600 p-2 flex flex-col justify-between shadow-2xl animate-arena-focus",
+    e59: "card-bg relative w-[130px] h-[190px] bg-slate-900 p-2 flex flex-col justify-between shadow-2xl animate-arena-focus",
     // <div>
-    e60: "flex justify-between items-start",
+    e60: "contents",
     // <span>
-    e61: "bg-amber-500 text-slate-950 text-sm font-black w-7 h-7 rounded-full flex items-center justify-center font-mono",
+    e61: "cd-num text-white text-base font-black leading-none font-mono [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <span>
-    e62: "text-[10px] bg-slate-800 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded font-bold",
+    e62: "absolute right-[14%] top-[16%] text-[10px] font-bold text-amber-300 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <div>
-    e63: "w-full h-12 my-1 rounded-lg bg-slate-800 border border-slate-700/70 flex items-center justify-center",
+    e63: "cd-icon",
     // <i> icon:circle
     e64: ({ arenaFocus }) => `fa-solid ${arenaFocus.icon || 'fa-circle'} text-4xl text-amber-400/85`,
     // <div>
-    e65: "text-center",
+    e65: "cd-title",
     // <h3>
-    e66: "text-sm font-black text-amber-300",
+    e66: "text-[11px] font-black text-slate-100 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <p>
-    e67: "text-[9px] text-slate-300 line-clamp-3 mt-0.5 leading-tight",
+    e67: "w-full text-center text-[8px] leading-[1.2] text-slate-200 line-clamp-4 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <div>
-    e68: "pt-1 border-t border-amber-500/40 flex justify-between items-center text-[10px]",
+    e68: "absolute left-0 right-0 top-full mt-2 flex justify-center items-center gap-2 text-[11px] [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <span>
     e69: "text-amber-400 font-bold",
     // <span>
     e70: "text-slate-200 font-black",
     // <button>
+    e72: "cd-desc",
     e71: "absolute -top-2 -right-2 w-7 h-7 rounded-full bg-slate-800 border border-slate-600 text-slate-300 text-xs font-black",
 
     // ── 面前牌堆邊框（原本在 JSX 內的 borderCls）──
@@ -505,23 +527,23 @@
     // <div>
     f38: "flex space-x-3 items-center justify-center h-full pointer-events-auto",
     // <div>
-    f39: ({ card, dragGhost, drawAnim, isSelected }) => `hand-card card-bg relative w-[130px] h-[190px] bg-slate-900 border p-2 flex flex-col justify-between shrink-0 cursor-grab active:cursor-grabbing touch-none select-none ${dragGhost && dragGhost.card.id === card.id ? 'opacity-30' : ''} ${drawAnim && drawAnim.card && drawAnim.card.id === card.id ? 'opacity-0' : ''} ${
-                                  isSelected ? 'selected border-red-400' : 'border-red-600 hover:border-red-500 shadow-[0_0_12px_rgba(220,38,38,0.3)]'
+    f39: ({ card, dragGhost, drawAnim, isSelected }) => `hand-card card-bg relative w-[130px] h-[190px] bg-slate-900 p-2 flex flex-col justify-between shrink-0 cursor-grab active:cursor-grabbing touch-none select-none ${dragGhost && dragGhost.card.id === card.id ? 'opacity-30' : ''} ${drawAnim && drawAnim.card && drawAnim.card.id === card.id ? 'opacity-0' : ''} ${
+                                  isSelected ? 'selected' : ''
                                 }`,
     // <div>
-    f40: "flex justify-between items-center",
+    f40: "cd-num",
     // <span>
-    f41: ({ isSelected }) => `${isSelected ? 'bg-amber-500' : 'bg-cyan-500'} text-slate-950 text-sm font-black w-6 h-6 rounded-full flex items-center justify-center font-mono`,
+    f41: ({ isSelected }) => `text-white text-base font-black leading-none font-mono [text-shadow:0_1px_3px_rgba(0,0,0,.9)]`,
     // <div>
-    f42: "w-full h-16 bg-slate-800/90 rounded-lg border border-slate-700/60 flex items-center justify-center my-1",
+    f42: "cd-icon",
     // <i>
-    f43: ({ card }) => `fa-solid ${card.icon} text-3xl text-cyan-400 filter drop-shadow`,
+    f43: ({ card }) => `fa-solid ${card.icon} text-4xl text-cyan-400 filter drop-shadow`,
     // <div>
-    f44: "text-center",
+    f44: "cd-desc",
     // <div>
-    f45: "text-xs font-black text-slate-100 truncate tracking-wide",
+    f45: "cd-title text-[11px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <div>
-    f46: "text-[8.5px] text-slate-300 line-clamp-3 leading-tight mt-0.5",
+    f46: "w-full text-center text-[8px] leading-[1.2] text-slate-200 line-clamp-4 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <div> 「無手牌」
     f47: "text-slate-500 text-xs",
 
@@ -533,27 +555,27 @@
     // <div>
     f50: "absolute inset-0",
     // <div>
-    f51: "w-full h-full border border-red-600 bg-gradient-to-br from-indigo-900 to-slate-800 flex items-center justify-center shadow-xl",
+    f51: "card-back w-full h-full shadow-xl",
     // <i> icon:moon
-    f52: "fa-solid fa-moon text-amber-400/80 text-3xl",
+    f52: "hidden",
     // <div>
     f53: "absolute inset-0",
     // <div>
-    f54: "card-bg w-full h-full bg-slate-900 border border-red-600 p-2 flex flex-col justify-between",
+    f54: "card-bg relative w-full h-full bg-slate-900 p-2 flex flex-col justify-between",
     // <div>
-    f55: "flex justify-between items-center",
+    f55: "cd-num",
     // <span>
-    f56: "bg-cyan-500 text-slate-950 text-sm font-black w-6 h-6 rounded-full flex items-center justify-center font-mono",
+    f56: "text-white text-base font-black leading-none font-mono [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <div>
-    f57: "w-full h-16 bg-slate-800/90 rounded-lg border border-slate-700/60 flex items-center justify-center my-1",
+    f57: "cd-icon",
     // <i>
-    f58: ({ c }) => `fa-solid ${c.icon} text-3xl text-cyan-400 filter drop-shadow`,
+    f58: ({ c }) => `fa-solid ${c.icon} text-4xl text-cyan-400 filter drop-shadow`,
     // <div>
-    f59: "text-center",
+    f59: "cd-desc",
     // <div>
-    f60: "text-xs font-black text-slate-100 truncate tracking-wide",
+    f60: "cd-title text-[11px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <div>
-    f61: "text-[8.5px] text-slate-300 line-clamp-3 leading-tight mt-0.5",
+    f61: "w-full text-center text-[8px] leading-[1.2] text-slate-200 line-clamp-4 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
 
     // ── 右側浮動操作按鈕 ──
     // <div>
