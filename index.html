@@ -564,8 +564,12 @@
           );
         }
         function FxBack({ cls = 'w-11 h-[60px]', label = '', moonCls = 'text-xs' }) {
+          // 卡背一律 130:190：以傳入的高度 (h-[Npx] 或 h-N) 為準，寬度依比例算出（行內 width 會蓋過 cls 內的 w-*）
+          const hm = /\bh-\[(\d+(?:\.\d+)?)px\]/.exec(cls);
+          const hu = /\bh-(\d+(?:\.\d+)?)\b/.exec(cls);
+          const hpx = hm ? parseFloat(hm[1]) : (hu ? parseFloat(hu[1]) * 4 : null);
           return (
-            <div className={`${cls} card-back flex flex-col items-center justify-center gap-0.5 shadow`}>
+            <div className={`${cls} card-back shrink-0 flex flex-col items-center justify-center gap-0.5 shadow`} style={hpx ? { width: Math.round(hpx * 130 / 190) } : undefined}>
               {label && <span className="text-[10px] font-black text-slate-300 leading-none">{label}</span>}
             </div>
           );
@@ -785,7 +789,7 @@
                         <Avatar p={r.p} size="w-6 h-6 text-xs" />
                         <span className={`w-12 truncate text-[10px] font-black ${r.p.id === localPlayerId ? 'text-sky-300' : 'text-slate-100'}`}>{r.p.name}</span>
                         <div className="relative w-10 h-[44px] shrink-0">
-                          <div className="absolute inset-0" style={an('fxFlipOut', 0.2, r.t - 0.05, 'ease-in')}><FxBack cls="w-10 h-[44px]" /></div>
+                          <div className="absolute inset-0 flex justify-center" style={an('fxFlipOut', 0.2, r.t - 0.05, 'ease-in')}><FxBack cls="w-10 h-[44px]" /></div>
                           <div className="absolute inset-0" style={an('fxFlipIn', 0.3, r.t + 0.1, 'ease-out')}><FxFaceMini c={r.card} cls="w-10 h-[44px]" /></div>
                         </div>
                         <div className="flex-1 min-w-0">
@@ -908,7 +912,7 @@
                   <FxChip p={p} />
                   <div style={inner}>
                     <div className="relative w-14 h-[76px]">
-                      <div className="absolute inset-0" style={isLoser ? a2('fxFlipOut', 0.2, 1.5, 'ease-in') : undefined}><FxBack cls="w-14 h-[76px]" /></div>
+                      <div className="absolute inset-0 flex justify-center" style={isLoser ? a2('fxFlipOut', 0.2, 1.5, 'ease-in') : undefined}><FxBack cls="w-14 h-[76px]" /></div>
                       {isLoser && fx.loserCard && (
                         <div className="absolute inset-0" style={a2('fxFlipIn', 0.25, 1.7, 'ease-out')}><FxFace c={fx.loserCard} cls="w-14 h-[76px]" /></div>
                       )}
@@ -1098,7 +1102,7 @@
                   <div ref={slotRef} className="relative w-14 h-[76px] shrink-0">
                     {fx.stolen && (
                       <div ref={stolenRef} className="absolute inset-0 z-20" style={{ animation: 'fxGraveMove 1.6s ease-in-out .85s both' }}>
-                        <div className="absolute inset-0" style={an('fxFlipOut', 0.2, 1.0, 'ease-in')}><FxBack cls="w-14 h-[76px]" /></div>
+                        <div className="absolute inset-0 flex justify-center" style={an('fxFlipOut', 0.2, 1.0, 'ease-in')}><FxBack cls="w-14 h-[76px]" /></div>
                         <div className="absolute inset-0" style={an('fxFlipIn', 0.25, 1.2, 'ease-out')}><FxFace c={fx.stolen} cls="w-14 h-[76px]" /></div>
                       </div>
                     )}
