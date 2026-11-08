@@ -44,13 +44,24 @@
   /* ── A–F 區古風字體（只設在區塊根節點讓子層繼承，Font Awesome 圖示不受影響）── */
   .gufeng { font-family: 'LXGW WenKai TC', 'Kaiti TC', 'STKaiti', 'DFKai-SB', 'BiauKai', 'Noto Serif TC', 'Songti TC', serif; }
 
+  /* ── 手牌背景圖（檔案放在 index.html 同一資料夾：card.jpg，建議 130x190）──
+     套用在：F 區手牌、抽牌動畫牌面、點開的放大檢視。--ov 為深色遮罩濃度（0 = 無遮罩，1 = 全黑）。
+     圖片不存在時自動退回原本的深色底（bg-slate-900）。 */
+  .card-bg {
+    --ov: 0;
+    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('card.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat;
+  }
+
   /* 手牌選中動畫 */
   .hand-card {
       transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, border-color 0.2s ease;
   }
   .hand-card.selected {
       transform: translateY(-12px) scale(1.04);
-      border-color: #0f0d09;
+      border-color: #f87171;
       box-shadow: 0 10px 20px rgba(245, 158, 11, 0.4), 0 0 15px rgba(245, 158, 11, 0.6);
       z-index: 30;
   }
@@ -373,15 +384,15 @@
     // <div>
     e58: "fixed inset-0 z-[120] flex items-center justify-center bg-black/55",
     // <div>
-    e59: "relative w-40 h-[210px] bg-slate-900 border-2 border-amber-400 rounded-2xl p-3 flex flex-col justify-between shadow-2xl animate-arena-focus",
+    e59: "card-bg relative w-[130px] h-[190px] bg-slate-900 border border-red-600 p-2 flex flex-col justify-between shadow-2xl animate-arena-focus",
     // <div>
     e60: "flex justify-between items-start",
     // <span>
-    e61: "bg-amber-500 text-slate-950 text-base font-black w-8 h-8 rounded-full flex items-center justify-center font-mono",
+    e61: "bg-amber-500 text-slate-950 text-sm font-black w-7 h-7 rounded-full flex items-center justify-center font-mono",
     // <span>
     e62: "text-[10px] bg-slate-800 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded font-bold",
     // <div>
-    e63: "w-full h-16 my-1 rounded-lg bg-slate-800 border border-slate-700/70 flex items-center justify-center",
+    e63: "w-full h-12 my-1 rounded-lg bg-slate-800 border border-slate-700/70 flex items-center justify-center",
     // <i> icon:circle
     e64: ({ arenaFocus }) => `fa-solid ${arenaFocus.icon || 'fa-circle'} text-4xl text-amber-400/85`,
     // <div>
@@ -391,7 +402,7 @@
     // <p>
     e67: "text-[9px] text-slate-300 line-clamp-3 mt-0.5 leading-tight",
     // <div>
-    e68: "pt-1.5 border-t border-amber-500/40 flex justify-between items-center text-[10px]",
+    e68: "pt-1 border-t border-amber-500/40 flex justify-between items-center text-[10px]",
     // <span>
     e69: "text-amber-400 font-bold",
     // <span>
@@ -494,8 +505,8 @@
     // <div>
     f38: "flex space-x-3 items-center justify-center h-full pointer-events-auto",
     // <div>
-    f39: ({ card, dragGhost, drawAnim, isSelected }) => `hand-card relative w-[130px] h-[190px] bg-slate-900 border-2 rounded-xl p-2 flex flex-col justify-between shrink-0 cursor-grab active:cursor-grabbing touch-none select-none ${dragGhost && dragGhost.card.id === card.id ? 'opacity-30' : ''} ${drawAnim && drawAnim.card && drawAnim.card.id === card.id ? 'opacity-0' : ''} ${
-                                  isSelected ? 'selected border-amber-400' : 'border-cyan-500/80 hover:border-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.3)]'
+    f39: ({ card, dragGhost, drawAnim, isSelected }) => `hand-card card-bg relative w-[130px] h-[190px] bg-slate-900 border p-2 flex flex-col justify-between shrink-0 cursor-grab active:cursor-grabbing touch-none select-none ${dragGhost && dragGhost.card.id === card.id ? 'opacity-30' : ''} ${drawAnim && drawAnim.card && drawAnim.card.id === card.id ? 'opacity-0' : ''} ${
+                                  isSelected ? 'selected border-red-400' : 'border-red-600 hover:border-red-500 shadow-[0_0_12px_rgba(220,38,38,0.3)]'
                                 }`,
     // <div>
     f40: "flex justify-between items-center",
@@ -522,13 +533,13 @@
     // <div>
     f50: "absolute inset-0",
     // <div>
-    f51: "w-full h-full rounded-xl border-2 border-amber-500/70 bg-gradient-to-br from-indigo-900 to-slate-800 flex items-center justify-center shadow-xl",
+    f51: "w-full h-full border border-red-600 bg-gradient-to-br from-indigo-900 to-slate-800 flex items-center justify-center shadow-xl",
     // <i> icon:moon
     f52: "fa-solid fa-moon text-amber-400/80 text-3xl",
     // <div>
     f53: "absolute inset-0",
     // <div>
-    f54: "w-full h-full bg-slate-900 border-2 border-cyan-500/80 rounded-xl p-2 flex flex-col justify-between",
+    f54: "card-bg w-full h-full bg-slate-900 border border-red-600 p-2 flex flex-col justify-between",
     // <div>
     f55: "flex justify-between items-center",
     // <span>
@@ -565,6 +576,12 @@
     f70: "text-[9.5px] font-black text-blue-200",
   },
   };
+
+  // ═══════════════ 玩家頭像（DiceBear 風格；要換風格只改 AVATAR_STYLE）═══════════════
+  // 可選：critters／fun-emoji／big-ears／croodles／bottts（原本）…；依各玩家 seed 固定出圖
+  const AVATAR_VER = '10.x';
+  const AVATAR_STYLE = 'critters';
+  window.AVATAR_URL = (seed) => 'https://api.dicebear.com/' + AVATAR_VER + '/' + AVATAR_STYLE + '/svg?seed=' + encodeURIComponent(seed);
 
   window.UI = UI;
 })();

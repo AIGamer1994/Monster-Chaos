@@ -549,7 +549,7 @@
             <div className={`${size} rounded-full bg-gradient-to-tr ${p.gradient} p-0.5 shadow shrink-0 ${glow}`}>
               {bad
                 ? <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-[0.9em] leading-none">{p.emoji}</div>
-                : <img src={`https://api.dicebear.com/7.x/bottts/svg?seed=${p.seed}`} alt={p.name} onError={() => setBad(true)} className="w-full h-full rounded-full bg-slate-900" />}
+                : <img src={AVATAR_URL(p.seed)} alt={p.name} onError={() => setBad(true)} className="w-full h-full rounded-full bg-slate-900" />}
             </div>
           );
         }
@@ -4949,7 +4949,7 @@
                           );
                         })()}
                         <div className={UI.D.d14({ player })}>
-                          <img src={`https://api.dicebear.com/7.x/bottts/svg?seed=${player.seed}`} alt={player.name} className={UI.D.d15} />
+                          <img src={AVATAR_URL(player.seed)} alt={player.name} className={UI.D.d15} />
                         </div>
                         <span className={UI.D.d16({ isTurn })}>{player.name}</span>
                       </div>
@@ -5190,7 +5190,7 @@
                         className={UI.F.f05({ isDead, isTurn })}
                       >
                         <div className={UI.F.f06({ me })}>
-                          <img src={`https://api.dicebear.com/7.x/bottts/svg?seed=${me.seed}`} alt={me.name} className={UI.F.f07} />
+                          <img src={AVATAR_URL(me.seed)} alt={me.name} className={UI.F.f07} />
                         </div>
                         <div className={UI.F.f08}>
                           <span className={UI.F.f09({ isTurn })}>{me.name}</span>
@@ -5624,7 +5624,7 @@
               {/* 拖曳中的手牌（浮動，不影響版面） */}
               {dragGhost && (
                 <div className="fixed z-[70] pointer-events-none" style={{ left: dragGhost.x, top: dragGhost.y, transform: 'translate(-50%, -60%) rotate(-3deg) scale(0.9)' }}>
-                  <div className={`w-[130px] h-[190px] bg-slate-900 border-2 rounded-xl p-2 flex flex-col justify-between shadow-2xl ${dragGhost.over ? 'border-emerald-400 shadow-[0_0_22px_rgba(52,211,153,0.7)]' : 'border-amber-400'}`}>
+                  <div className={`card-bg w-[130px] h-[190px] bg-slate-900 border p-2 flex flex-col justify-between shadow-2xl ${dragGhost.over ? 'border-emerald-400 shadow-[0_0_22px_rgba(52,211,153,0.7)]' : 'border-red-500'}`}>
                     <div className="flex justify-between items-center">
                       <span className="bg-amber-500 text-slate-950 text-sm font-black w-6 h-6 rounded-full flex items-center justify-center font-mono">{dragGhost.card.value}</span>
                     </div>
