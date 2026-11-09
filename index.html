@@ -549,7 +549,7 @@
             <div className={`${size} rounded-full bg-gradient-to-tr ${p.gradient} p-0.5 shadow shrink-0 ${glow}`}>
               {bad
                 ? <div className="w-full h-full rounded-full bg-slate-900 flex items-center justify-center text-[0.9em] leading-none">{p.emoji}</div>
-                : <img src={AVATAR_URL(p.seed)} alt={p.name} onError={() => setBad(true)} className="w-full h-full rounded-full bg-slate-900" />}
+                : <img src={AVATAR_URL(p.id)} alt={p.name} onError={() => setBad(true)} className="w-full h-full rounded-full bg-slate-900 object-cover" />}
             </div>
           );
         }
@@ -563,9 +563,12 @@
             </div>
           );
         }
-        function FxBack({ cls = 'w-11 h-[60px]', label = '', moonCls = 'text-xs' }) {
+        function FxBack({ cls = 'w-12', label = '', moonCls = 'text-xs' }) {
+          // 有 h-full／填滿父層時不加 aspect；其餘一律 3:4（與手牌／暗牌／cardb 同比例）
+          const fill = /\bh-full\b|\bw-full\b/.test(cls || '');
+          const ratio = fill ? '' : 'aspect-[3/4]';
           return (
-            <div className={`${cls} card-back flex flex-col items-center justify-center gap-0.5 shadow`}>
+            <div className={`${cls} ${ratio} card-back flex flex-col items-center justify-center gap-0.5 shadow shrink-0`.trim()}>
               {label && <span className="text-[10px] font-black text-slate-300 leading-none">{label}</span>}
             </div>
           );
@@ -577,32 +580,33 @@
             <div className="flex items-center gap-2 rounded-lg border border-yellow-400/70 bg-slate-950/70 px-2 py-1" style={{ animation: `fxPop .4s ease ${delay}s both` }}>
               <div className="flex flex-col items-center gap-0.5">
                 <span className="text-[10px] font-black text-sky-300">{out}</span>
-                <FxFace c={mine.out} cls="w-12 h-[60px]" />
+                <FxFace c={mine.out} cls="w-12" />
               </div>
               <i className="fa-solid fa-arrow-right text-amber-400 text-sm"></i>
               <div className="flex flex-col items-center gap-0.5">
                 <span className="text-[10px] font-black text-emerald-300">{inn}</span>
-                <FxFace c={mine.in} cls="w-12 h-[60px]" />
+                <FxFace c={mine.in} cls="w-12" />
               </div>
             </div>
           );
         }
-        function FxFace({ c, cls = 'w-11 h-[60px]' }) {
+        // 動畫正面小牌：與面前區同框（front-card-bg／3:4／無圓角無邊框）；卡背走 FxBack（3:4 + cardb）
+        function FxFace({ c, cls = 'w-12' }) {
           if (!c) return <FxBack cls={cls} />;
           return (
-            <div className={`${cls} shrink-0 overflow-hidden rounded-md border-2 border-amber-400 bg-slate-900 flex flex-col items-center justify-center shadow-lg`}>
-              <span className="font-mono font-black text-amber-300 text-base leading-none">{c.value}</span>
+            <div className={`${cls} aspect-[3/4] shrink-0 overflow-hidden front-card-bg bg-slate-900 flex flex-col items-center justify-center shadow-lg gufeng`}>
+              <span className="gothic-num font-black text-amber-300 text-base leading-none">{c.value}</span>
               <i className={`fa-solid ${c.icon || 'fa-circle'} text-amber-400/80 text-sm my-0.5`}></i>
               <span className="text-[9px] font-black text-amber-200 leading-none whitespace-nowrap">{c.title}</span>
             </div>
           );
         }
         // 最終比點數用的精簡牌面：只有數值與牌名（不放中間圖案），避免字太大放不下
-        function FxFaceMini({ c, cls = 'w-10 h-[44px]' }) {
+        function FxFaceMini({ c, cls = 'w-10' }) {
           if (!c) return <FxBack cls={cls} />;
           return (
-            <div className={`${cls} shrink-0 overflow-hidden rounded-md border-2 border-amber-400 bg-slate-900 flex flex-col items-center justify-center shadow-lg`}>
-              <span className="font-mono font-black text-amber-300 text-sm leading-none">{c.value}</span>
+            <div className={`${cls} aspect-[3/4] shrink-0 overflow-hidden front-card-bg bg-slate-900 flex flex-col items-center justify-center shadow-lg gufeng`}>
+              <span className="gothic-num font-black text-amber-300 text-sm leading-none">{c.value}</span>
               <span className="text-[8px] font-black text-amber-200 leading-none whitespace-nowrap mt-1 tracking-tighter">{c.title}</span>
             </div>
           );
@@ -673,20 +677,20 @@
           if (kind === 'none') {
             body = (
               <div className="px-3 py-1 rounded-full bg-slate-800/90 border border-slate-600 text-slate-300 text-[11px] font-black shadow-lg">
-                <span className="font-mono text-amber-300 mr-1">{card.value}</span>{card.title}｜{fx.noneText}
+                <span className="gothic-num text-amber-300 mr-1">{card.value}</span>{card.title}｜{fx.noneText}
               </div>
             );
           } else if (kind === 'place') {
             // 牌打出後，縮小滑到頭像下邊的「面前」位置
             body = (
               <div className="flex flex-col items-center gap-1.5">
-                <div className="relative w-[200px] h-[144px]">
+                <div className="relative w-[200px] h-[160px]">
                   <div className="absolute left-[36px] top-0" style={an('fxInL', 0.4, 0)}><FxChip p={src} size="w-14 h-14 text-2xl" /></div>
-                  <div className="absolute left-[44px] top-[86px] w-[40px] h-[54px] rounded-md border-2 border-dashed border-slate-500/70 flex items-end justify-center" style={an('fxFadeUp', 0.4, 0.5)}>
+                  <div className="absolute left-[44px] top-[96px] w-[40px] h-[60px] rounded-md border-2 border-dashed border-slate-500/70 flex items-end justify-center" style={an('fxFadeUp', 0.4, 0.5)}>
                     <span className="text-[8px] text-slate-500 mb-0.5">面前</span>
                   </div>
                   <div className="absolute left-[120px] top-0 z-10" style={an('fxPop', 0.4, 0.15)}>
-                    <div style={an('fxToFront', 0.7, 1.0, 'ease-in-out')}><FxFace c={card} cls="w-14 h-[76px]" /></div>
+                    <div style={an('fxToFront', 0.7, 1.0, 'ease-in-out')}><FxFace c={card} cls="w-14" /></div>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-1.5">
@@ -708,14 +712,14 @@
             // 棄掉面前的僕人 ➔ 額外回合
             body = (
               <div className="flex flex-col items-center gap-1.5">
-                <div className="relative w-[200px] h-[144px]">
+                <div className="relative w-[200px] h-[160px]">
                   <div className="absolute left-[36px] top-0" style={an('fxInL', 0.4, 0)}><FxChip p={src} size="w-14 h-14 text-2xl" /></div>
-                  <div className="absolute left-[44px] top-[86px] w-[40px] h-[54px] rounded-md border-2 border-dashed border-slate-500/70 flex items-end justify-center" style={an('fxFadeUp', 0.4, 0.3)}>
+                  <div className="absolute left-[44px] top-[96px] w-[40px] h-[60px] rounded-md border-2 border-dashed border-slate-500/70 flex items-end justify-center" style={an('fxFadeUp', 0.4, 0.3)}>
                     <span className="text-[8px] text-slate-500 mb-0.5">面前</span>
                   </div>
                   <div className="absolute left-[36px] top-[75px] z-10" style={{ transform: 'scale(.65)' }}>
                     <div style={an('fxPop', 0.4, 0.2)}>
-                      <div style={an('fxDiscard', 0.7, 1.1, 'ease-in')}><FxFace c={card} cls="w-14 h-[76px]" /></div>
+                      <div style={an('fxDiscard', 0.7, 1.1, 'ease-in')}><FxFace c={card} cls="w-14" /></div>
                     </div>
                   </div>
                   <span className="absolute left-[96px] top-[100px] px-1.5 py-0.5 rounded-full bg-emerald-900/70 border border-emerald-500/60 text-emerald-200 text-[9px] font-black" style={{ animation: 'fxFadeUp .3s ease .5s both, fxOut .3s ease 1.1s forwards' }}>生效中</span>
@@ -734,16 +738,16 @@
             // 棄掉面前煉金術士 ➔ 復活（排在淘汰動畫之後播）
             body = (
               <div className="flex flex-col items-center gap-1.5">
-                <div className="relative w-[220px] h-[150px]">
+                <div className="relative w-[220px] h-[166px]">
                   <div className="absolute left-[40px] top-0" style={an('fxInL', 0.4, 0)}>
                     <FxChip p={src} size="w-14 h-14 text-2xl" glow="ring-4 ring-emerald-400/70" />
                   </div>
-                  <div className="absolute left-[48px] top-[90px] w-[40px] h-[54px] rounded-md border-2 border-dashed border-slate-500/70 flex items-end justify-center" style={an('fxFadeUp', 0.4, 0.25)}>
+                  <div className="absolute left-[48px] top-[100px] w-[40px] h-[60px] rounded-md border-2 border-dashed border-slate-500/70 flex items-end justify-center" style={an('fxFadeUp', 0.4, 0.25)}>
                     <span className="text-[8px] text-slate-500 mb-0.5">面前</span>
                   </div>
                   <div className="absolute left-[40px] top-[78px] z-10" style={{ transform: 'scale(.65)' }}>
                     <div style={an('fxPop', 0.35, 0.2)}>
-                      <div style={an('fxDiscard', 0.7, 1.0, 'ease-in')}><FxFace c={card} cls="w-14 h-[76px]" /></div>
+                      <div style={an('fxDiscard', 0.7, 1.0, 'ease-in')}><FxFace c={card} cls="w-14" /></div>
                     </div>
                   </div>
                   <span className="absolute left-[100px] top-[102px] px-1.5 py-0.5 rounded-full bg-rose-900/70 border border-rose-500/50 text-rose-200 text-[9px] font-black" style={{ animation: 'fxFadeUp .3s ease .4s both, fxOut .3s ease 1.05s forwards' }}>生效中</span>
@@ -784,9 +788,9 @@
                       <div className="relative flex items-center gap-1.5 px-1.5 py-0.5 rounded-lg bg-slate-900/70 border border-slate-700/60" style={(r.win || (fx.mode === 'beggar' && r.winLate)) ? { animation: `fxWinGlow .6s ease-out ${tWin}s both` } : (fx.mode === 'beggar' ? { animation: `fxDim .5s linear ${tWin + 0.35}s both` } : { animation: `fxDim .5s linear ${tWin}s both` })}>
                         <Avatar p={r.p} size="w-6 h-6 text-xs" />
                         <span className={`w-12 truncate text-[10px] font-black ${r.p.id === localPlayerId ? 'text-sky-300' : 'text-slate-100'}`}>{r.p.name}</span>
-                        <div className="relative w-10 h-[44px] shrink-0">
-                          <div className="absolute inset-0" style={an('fxFlipOut', 0.2, r.t - 0.05, 'ease-in')}><FxBack cls="w-10 h-[44px]" /></div>
-                          <div className="absolute inset-0" style={an('fxFlipIn', 0.3, r.t + 0.1, 'ease-out')}><FxFaceMini c={r.card} cls="w-10 h-[44px]" /></div>
+                        <div className="relative w-10 aspect-[3/4] shrink-0">
+                          <div className="absolute inset-0" style={an('fxFlipOut', 0.2, r.t - 0.05, 'ease-in')}><FxBack cls="w-full h-full" /></div>
+                          <div className="absolute inset-0" style={an('fxFlipIn', 0.3, r.t + 0.1, 'ease-out')}><FxFaceMini c={r.card} cls="w-10" /></div>
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="h-2.5 rounded bg-slate-800 overflow-hidden">
@@ -796,7 +800,7 @@
                             {hasM && r.mods.map((m, mi) => <span key={mi} className="text-[8px] font-black px-1 rounded bg-fuchsia-900/70 border border-fuchsia-500/50 text-fuchsia-200" style={an('fxPop', 0.3, r.t + 0.6)}>{m.label}</span>)}
                           </div>
                         </div>
-                        <div className="relative w-9 h-6 shrink-0 font-mono font-black text-lg text-amber-300">
+                        <div className="relative w-9 h-6 shrink-0 gothic-num font-black text-lg text-amber-300">
                           <span className="absolute inset-0 flex items-center justify-end" style={hasM ? { animation: `fxPop .3s ease-out ${dBase}s both, fxOut .2s linear ${r.t + 0.95}s forwards` } : an('fxPop', 0.3, dBase)}>{r.base}</span>
                           {hasM && <span className="absolute inset-0 flex items-center justify-end" style={an('fxPop', 0.35, r.t + 1.0)}>{r.final}</span>}
                         </div>
@@ -875,7 +879,7 @@
                       return (
                         <div key={i} className="flex flex-col items-center gap-1" style={active ? { animation: 'fxTakeSlot 1.6s ease-in-out .55s both' } : an('fxPop', 0.3, 0.2 + i * 0.1)}>
                           <div className={active ? 'drop-shadow-[0_0_10px_#fbbf24] ring-2 ring-amber-400/80 rounded-md' : ''}>
-                            <FxBack cls="w-10 h-[54px]" />
+                            <FxBack cls="w-10" />
                           </div>
                           <span className={`text-[9px] font-black ${active ? 'text-amber-300' : 'text-slate-500'}`}>暗牌{i + 1}</span>
                         </div>
@@ -907,10 +911,10 @@
                 <div className="flex flex-col items-center gap-1.5" style={a2(side === 'L' ? 'fxClashL' : 'fxClashR', 0.6, 0.5, 'cubic-bezier(.3,1.4,.5,1)')}>
                   <FxChip p={p} />
                   <div style={inner}>
-                    <div className="relative w-14 h-[76px]">
-                      <div className="absolute inset-0" style={isLoser ? a2('fxFlipOut', 0.2, 1.5, 'ease-in') : undefined}><FxBack cls="w-14 h-[76px]" /></div>
+                    <div className="relative w-14 aspect-[3/4]">
+                      <div className="absolute inset-0" style={isLoser ? a2('fxFlipOut', 0.2, 1.5, 'ease-in') : undefined}><FxBack cls="w-full h-full" /></div>
                       {isLoser && fx.loserCard && (
-                        <div className="absolute inset-0" style={a2('fxFlipIn', 0.25, 1.7, 'ease-out')}><FxFace c={fx.loserCard} cls="w-14 h-[76px]" /></div>
+                        <div className="absolute inset-0" style={a2('fxFlipIn', 0.25, 1.7, 'ease-out')}><FxFace c={fx.loserCard} cls="w-14" /></div>
                       )}
                       {isLoser && stamp(T + 2.0 * K)}
                     </div>
@@ -923,7 +927,7 @@
                 <div className="col-start-1 row-start-1 flex flex-col items-center gap-2.5" style={an('fxOut', 0.3, T - 0.3, 'ease-in')}>
                   <div className="flex items-center justify-center gap-2.5">
                     <div style={an('fxInL', 0.4, 0)}><FxChip p={src} /></div>
-                    <div style={an('fxPop', 0.4, 0.15)}><FxFace c={card} cls="w-14 h-[76px]" /></div>
+                    <div style={an('fxPop', 0.4, 0.15)}><FxFace c={card} cls="w-14" /></div>
                     <i className="fa-solid fa-arrow-right text-amber-400 text-sm" style={an('fxFadeUp', 0.3, 0.5)}></i>
                     <div style={an('fxInR', 0.4, 0.6)}><FxChip p={tgt} /></div>
                   </div>
@@ -931,7 +935,7 @@
                 </div>
                 <div className="col-start-1 row-start-1 flex flex-col items-center gap-2">
                   <div className="flex items-center gap-1.5" style={a2('fxPop', 0.4, 0)}>
-                    <FxFace c={card} cls="w-12 h-[64px]" />
+                    <FxFace c={card} cls="w-12" />
                     <span className="text-amber-300 font-black text-sm whitespace-nowrap">{fx.mode}</span>
                   </div>
                   <div className="relative flex items-center justify-center gap-3">
@@ -956,16 +960,16 @@
               <div className="flex flex-col items-center gap-2">
                 <div className="flex items-center gap-1.5 text-[10px] font-black text-amber-200" style={an('fxPop', 0.4, 0)}>
                   {card.title === '扒手' && <FxChip p={src} size="w-7 h-7 text-sm" />}
-                  <span><span className="font-mono text-amber-300">{card.value}</span> {card.title}</span>
+                  <span><span className="gothic-num text-amber-300">{card.value}</span> {card.title}</span>
                 </div>
                 <div className="flex items-center justify-center gap-3">
                   <div style={an('fxInL', 0.4, 0.1)}><FxChip p={fx.a} /></div>
                   <div className="relative w-[100px] h-[78px]">
                     <div className="absolute left-1/2 top-1/2 -ml-[20px] -mt-[28px]" style={{ animation: 'fxCrossA 1.1s ease-in-out .7s both' }}>
-                      <FxBack cls="w-8 h-11" />
+                      <FxBack cls="w-8" />
                     </div>
                     <div className="absolute left-1/2 top-1/2 -ml-[20px] -mt-[28px]" style={{ animation: 'fxCrossB 1.1s ease-in-out .7s both' }}>
-                      <FxBack cls="w-8 h-11" />
+                      <FxBack cls="w-8" />
                     </div>
                     {stamp(1.9)}
                   </div>
@@ -996,7 +1000,7 @@
               <div className="flex flex-col items-center gap-1">
                 <div className="flex items-center gap-1.5 text-[10px] font-black text-amber-200" style={an('fxPop', 0.4, 0)}>
                   <FxChip p={src} size="w-6 h-6 text-xs" />
-                  <span><span className="font-mono text-amber-300">{card.value}</span> {card.title}｜全員手牌洗勻重發</span>
+                  <span><span className="gothic-num text-amber-300">{card.value}</span> {card.title}｜全員手牌洗勻重發</span>
                 </div>
                 <div className="relative w-[240px] h-[160px]">
                   {ids.map((p, i) => {
@@ -1012,8 +1016,8 @@
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div style={an('fxShuffle', 0.9, 0.75, 'ease-in-out')}>
                       <div className="relative w-9 h-12">
-                        <div className="absolute -left-1 -top-1"><FxBack cls="w-9 h-12" /></div>
-                        <div className="absolute left-0 top-0"><FxBack cls="w-9 h-12" /></div>
+                        <div className="absolute -left-1 -top-1"><FxBack cls="w-9" /></div>
+                        <div className="absolute left-0 top-0"><FxBack cls="w-9" /></div>
                       </div>
                     </div>
                   </div>
@@ -1022,7 +1026,7 @@
                     return (
                       <div key={`k${p.id}`} className="absolute inset-0 flex items-center justify-center pointer-events-none">
                         <div style={{ '--x': `${x}px`, '--y': `${y}px`, animation: `fxDrunkCard 2.5s ease-in-out ${0.15 + i * 0.07}s both` }}>
-                          <FxBack cls="w-6 h-8" />
+                          <FxBack cls="w-6" />
                         </div>
                       </div>
                     );
@@ -1039,7 +1043,7 @@
               <div className="flex flex-col items-center gap-2">
                 <div className="flex items-center gap-1.5" style={an('fxPop', 0.4, 0)}>
                   <FxChip p={src} />
-                  <span className="text-[10px] font-black text-amber-200"><span className="font-mono text-amber-300">{card.value}</span> {card.title}｜調整中央暗牌</span>
+                  <span className="text-[10px] font-black text-amber-200"><span className="gothic-num text-amber-300">{card.value}</span> {card.title}｜調整中央暗牌</span>
                 </div>
                 <div className="relative w-[170px] h-[92px]">
                   {[0, 1, 2].map(i => (
@@ -1058,14 +1062,14 @@
                   <FxChip p={src} size="w-14 h-14 text-2xl" glow="ring-4 ring-cyan-400/70" />
                   <i className="fa-solid fa-shield-halved absolute -right-4 -top-2 text-3xl text-cyan-300 drop-shadow" style={an('fxPop', 0.4, 0.5)}></i>
                 </div>
-                <div className="text-[11px] font-black text-cyan-200" style={an('fxFadeUp', 0.4, 0.9)}><span className="font-mono text-amber-300">{card.value}</span> {card.title}｜受保護至下個回合</div>
+                <div className="text-[11px] font-black text-cyan-200" style={an('fxFadeUp', 0.4, 0.9)}><span className="gothic-num text-amber-300">{card.value}</span> {card.title}｜受保護至下個回合</div>
               </div>
             );
           } else if (kind === 'peek') {
             body = (
               <div className="flex flex-col items-center gap-2">
                 <div className="flex items-center gap-1.5 text-[10px] font-black text-amber-200" style={an('fxPop', 0.4, 0)}>
-                  <span><span className="font-mono text-amber-300">{card.value}</span> {card.title}</span>
+                  <span><span className="gothic-num text-amber-300">{card.value}</span> {card.title}</span>
                 </div>
                 <div className="flex items-center justify-center gap-3">
                   <div style={an('fxInL', 0.4, 0.1)}><FxChip p={src} /></div>
@@ -1078,7 +1082,7 @@
                 {fx.peeked ? (
                   <div className="flex flex-col items-center gap-1 mt-1" style={an('fxPop', 0.4, 1.4)}>
                     <span className="text-[10px] font-black text-sky-300"><i className="fa-solid fa-lock mr-0.5"></i>你看到的手牌</span>
-                    <FxFace c={fx.peeked} cls="w-14 h-[76px]" />
+                    <FxFace c={fx.peeked} cls="w-14" />
                   </div>
                 ) : (
                   <div className="px-2.5 py-1 rounded-lg bg-slate-800 border border-sky-500/50 text-sky-200 font-black text-[10px]" style={an('fxFadeUp', 0.35, 1.2)}>
@@ -1092,21 +1096,21 @@
             body = (
               <div className="flex flex-col items-center gap-2">
                 <div className="flex items-center gap-1.5 text-[10px] font-black text-amber-200" style={an('fxPop', 0.4, 0)}>
-                  <span><span className="font-mono text-amber-300">{card.value}</span> {card.title}</span>
+                  <span><span className="gothic-num text-amber-300">{card.value}</span> {card.title}</span>
                 </div>
                 <div className="relative flex items-center justify-center gap-2">
-                  <div ref={slotRef} className="relative w-14 h-[76px] shrink-0">
+                  <div ref={slotRef} className="relative w-14 aspect-[3/4] shrink-0">
                     {fx.stolen && (
                       <div ref={stolenRef} className="absolute inset-0 z-20" style={{ animation: 'fxGraveMove 1.6s ease-in-out .85s both' }}>
-                        <div className="absolute inset-0" style={an('fxFlipOut', 0.2, 1.0, 'ease-in')}><FxBack cls="w-14 h-[76px]" /></div>
-                        <div className="absolute inset-0" style={an('fxFlipIn', 0.25, 1.2, 'ease-out')}><FxFace c={fx.stolen} cls="w-14 h-[76px]" /></div>
+                        <div className="absolute inset-0" style={an('fxFlipOut', 0.2, 1.0, 'ease-in')}><FxBack cls="w-full h-full" /></div>
+                        <div className="absolute inset-0" style={an('fxFlipIn', 0.25, 1.2, 'ease-out')}><FxFace c={fx.stolen} cls="w-14" /></div>
                       </div>
                     )}
-                    {!fx.stolen && <div className="w-14 h-[76px] rounded-md border-2 border-dashed border-slate-600/60" />}
+                    {!fx.stolen && <div className="w-14 aspect-[3/4] rounded-md border-2 border-dashed border-slate-600/60" />}
                     <span className="absolute left-0 right-0 top-full mt-1 text-center text-[9px] font-black text-amber-200" style={an('fxFadeUp', 0.3, 2.5)}>奪取</span>
                   </div>
                   <div style={an('fxInL', 0.4, 0)}><FxChip p={src} /></div>
-                  <div style={an('fxPop', 0.4, 0.15)}><FxFace c={card} cls="w-12 h-[66px]" /></div>
+                  <div style={an('fxPop', 0.4, 0.15)}><FxFace c={card} cls="w-12" /></div>
                   {tgt && !graveSelf && (
                     <>
                       <i className="fa-solid fa-arrow-right text-amber-400 text-sm" style={an('fxFadeUp', 0.3, 0.4)}></i>
@@ -1114,7 +1118,7 @@
                         <FxChip p={tgt} />
                         {fx.stolen && (
                           <div className="absolute left-full ml-1.5 top-1/2 -translate-y-1/2 pointer-events-none" style={an('fxOut', 0.35, 0.95, 'ease-in')}>
-                            <FxFace c={fx.stolen} cls="w-10 h-[54px]" />
+                            <FxFace c={fx.stolen} cls="w-10" />
                           </div>
                         )}
                       </div>
@@ -1123,10 +1127,10 @@
                   {graveSelf && (
                     <>
                       <span className="text-[10px] font-black text-slate-300" style={an('fxFadeUp', 0.3, 0.5)}>對自己</span>
-                      <div ref={tgtRef} className="relative w-10 h-[54px] shrink-0" style={an('fxInR', 0.4, 0.5)}>
+                      <div ref={tgtRef} className="relative w-10 aspect-[3/4] shrink-0" style={an('fxInR', 0.4, 0.5)}>
                         {fx.stolen && (
                           <div className="absolute inset-0 pointer-events-none" style={an('fxOut', 0.35, 0.95, 'ease-in')}>
-                            <FxFace c={fx.stolen} cls="w-10 h-[54px]" />
+                            <FxFace c={fx.stolen} cls="w-10" />
                           </div>
                         )}
                       </div>
@@ -1135,7 +1139,7 @@
                 </div>
                 {fx.stolen && (
                   <div className="text-[10px] font-black text-amber-200" style={an('fxFadeUp', 0.35, 2.6)}>
-                    奪取面前 <span className="font-mono text-amber-300">({fx.stolen.value})</span> {fx.stolen.title}
+                    奪取面前 <span className="gothic-num text-amber-300">({fx.stolen.value})</span> {fx.stolen.title}
                   </div>
                 )}
               </div>
@@ -1151,13 +1155,13 @@
               stampAt = 1.0 + gs.length * 0.3 + 0.3;
               badges = gs.map((g, i) => (
                 <div key={i} className="px-2.5 py-1 rounded-lg bg-slate-800 border border-amber-500/60 text-amber-200 font-black text-sm" style={an('fxFlip', 0.35, 1.0 + i * 0.3)}>
-                  猜 <span className="font-mono text-lg text-amber-300">{g}</span>
+                  猜 <span className="gothic-num text-lg text-amber-300">{g}</span>
                 </div>
               ));
             } else if (kind === 'ask') {
               badges = (
                 <div className="px-2.5 py-1 rounded-lg bg-slate-800 border border-amber-500/60 text-amber-200 font-black text-sm" style={an('fxFlip', 0.35, 1.0)}>
-                  手牌是 <span className="font-mono text-lg text-amber-300">{fx.question}</span> ？
+                  手牌是 <span className="gothic-num text-lg text-amber-300">{fx.question}</span> ？
                 </div>
               );
               stampAt = 1.6;
@@ -1191,7 +1195,7 @@
               <div className="flex flex-col items-center">
                 <div className="relative flex items-center justify-center gap-2.5">
                   {srcWrap}
-                  <div style={an('fxPop', 0.4, 0.15)}><FxFace c={card} cls="w-14 h-[76px]" /></div>
+                  <div style={an('fxPop', 0.4, 0.15)}><FxFace c={card} cls="w-14" /></div>
                   {tgt && tgt !== src && (
                     <>
                       <i className="fa-solid fa-arrow-right text-amber-400 text-sm" style={an('fxFadeUp', 0.3, 0.5)}></i>
@@ -1217,7 +1221,7 @@
           // 非全屏動畫：點擊區向下延伸覆蓋 D 區（手牌），方便大拇指點「繼續」；動畫本體仍偏上對齊 C 區
           const fxEl = full ? (
             <div
-              className={`${replay ? 'fx-hold' : ''} fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-sm pointer-events-auto flex justify-center items-center ${canDismiss || replay ? 'cursor-pointer' : ''}`}
+              className={`gufeng ${replay ? 'fx-hold' : ''} fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-sm pointer-events-auto flex justify-center items-center ${canDismiss || replay ? 'cursor-pointer' : ''}`}
               style={replay ? undefined : (fx.sticky ? { animation: 'fxIn .25s linear both' } : { animation: `fxIn .25s linear both, fxOut .3s linear ${Math.max(0, fx.duration + (fx.hold !== undefined ? fx.hold : fxHold(fx)) - 300) / 1000}s forwards` })}
               onClick={handleClick}
             >
@@ -1227,7 +1231,7 @@
                   {reveals.map(r => (
                     <div key={r.p.id} className="flex items-center gap-1.5 rounded-lg border border-fuchsia-500/50 bg-slate-950/85 px-1.5 py-1">
                       <span className="text-[9px] font-black leading-tight text-fuchsia-300 whitespace-nowrap">{r.p.name}<br />公開手牌</span>
-                      {r.cards && r.cards.length ? r.cards.map((c, ci) => <FxFace key={ci} c={c} cls="w-11 h-[58px]" />) : <span className="text-[9px] text-slate-400">無</span>}
+                      {r.cards && r.cards.length ? r.cards.map((c, ci) => <FxFace key={ci} c={c} cls="w-11" />) : <span className="text-[9px] text-slate-400">無</span>}
                     </div>
                   ))}
                 </div>
@@ -1242,14 +1246,14 @@
                   ))}
             </div>
           ) : isNone ? (
-            <div className={`${replay ? 'fx-hold' : ''} absolute inset-x-0 top-6 bottom-0 z-30 rounded-lg flex justify-center items-end pb-3 pointer-events-none`}
+            <div className={`gufeng ${replay ? 'fx-hold' : ''} absolute inset-x-0 top-6 bottom-0 z-30 rounded-lg flex justify-center items-end pb-3 pointer-events-none`}
               style={replay ? undefined : { animation: `fxIn .25s linear both, fxOut .3s linear ${Math.max(0, fx.duration + (fx.hold !== undefined ? fx.hold : fxHold(fx)) - 300) / 1000}s forwards` }}
             >
               <div ref={bodyRef} className="contents">{body}</div>
             </div>
           ) : (
             <div
-              className={`${replay ? 'fx-hold' : ''} fixed inset-x-0 top-[18%] bottom-0 z-[60] flex flex-col pointer-events-auto cursor-pointer max-w-[480px] mx-auto`}
+              className={`gufeng ${replay ? 'fx-hold' : ''} fixed inset-x-0 top-[18%] bottom-0 z-[60] flex flex-col pointer-events-auto cursor-pointer max-w-[480px] mx-auto`}
               style={replay ? undefined : (fx.sticky ? { animation: 'fxIn .25s linear both' } : { animation: `fxIn .25s linear both, fxOut .3s linear ${Math.max(0, fx.duration + (fx.hold !== undefined ? fx.hold : fxHold(fx)) - 300) / 1000}s forwards` })}
               onClick={handleClick}
             >
@@ -1261,7 +1265,7 @@
                     {reveals.map(r => (
                       <div key={r.p.id} className="flex items-center gap-1.5 rounded-lg border border-fuchsia-500/50 bg-slate-950/85 px-1.5 py-1">
                         <span className="text-[9px] font-black leading-tight text-fuchsia-300 whitespace-nowrap">{r.p.name}<br />公開手牌</span>
-                        {r.cards && r.cards.length ? r.cards.map((c, ci) => <FxFace key={ci} c={c} cls="w-11 h-[58px]" />) : <span className="text-[9px] text-slate-400">無</span>}
+                        {r.cards && r.cards.length ? r.cards.map((c, ci) => <FxFace key={ci} c={c} cls="w-11" />) : <span className="text-[9px] text-slate-400">無</span>}
                       </div>
                     ))}
                   </div>
@@ -1753,6 +1757,12 @@
           const [recentArenaCards, setRecentArenaCards] = useState([]);
           const [arenaFanOpen, setArenaFanOpen] = useState(false);
           const [arenaFocus, setArenaFocus] = useState(null);
+          useEffect(() => {
+            if (!arenaFocus) return;
+            const onKey = (ev) => { if (ev.key === 'Escape') setArenaFocus(null); };
+            window.addEventListener('keydown', onKey);
+            return () => window.removeEventListener('keydown', onKey);
+          }, [arenaFocus]);
           const [showBroadcast, setShowBroadcast] = useState(false); // C 區頂部「動態」廣播：預設開啟
           const [fx, setFx] = useState(null);          // C 區效果動畫
           const fxRef = useRef(fx);
@@ -1826,6 +1836,24 @@
           const longPressRef = useRef(null); // 手牌長按計時器
           const lastTapRef = useRef(null);   // 雙點出牌：上一次點的手牌與時間
           const [zoomCard, setZoomCard] = useState(null); // 長按放大顯示的手牌
+          // 長按放大若 pointerup 遺失（常見於手機手勢），用全域事件與 timeout 保底關閉，避免卡死
+          useEffect(() => {
+            if (!zoomCard) return;
+            const close = () => setZoomCard(null);
+            const onKey = (ev) => { if (ev.key === 'Escape') close(); };
+            window.addEventListener('pointerup', close, true);
+            window.addEventListener('pointercancel', close, true);
+            window.addEventListener('blur', close);
+            window.addEventListener('keydown', onKey);
+            const t = setTimeout(close, 12000); // 最長 12 秒自動關
+            return () => {
+              window.removeEventListener('pointerup', close, true);
+              window.removeEventListener('pointercancel', close, true);
+              window.removeEventListener('blur', close);
+              window.removeEventListener('keydown', onKey);
+              clearTimeout(t);
+            };
+          }, [zoomCard]);
           const dragRef = useRef(null);   // 手牌拖曳中的資料
           const arenaRef = useRef(null);  // C 區（放開即出牌的區域）
           const [dragGhost, setDragGhost] = useState(null);
@@ -4645,7 +4673,7 @@
                     <div className="text-4xl mb-2">🌙</div>
                     <h1 className="text-3xl font-black tracking-widest text-amber-300">狼月</h1>
                     <p className="text-xs text-slate-400 mt-1">Wolf Moon · 線上多人版</p>
-                    <p className="text-[10px] font-mono font-bold text-cyan-400/90 mt-1.5 tracking-tight">{version}</p>
+                    <p className="text-[10px] gothic-num font-bold text-cyan-400/90 mt-1.5 tracking-tight">{version}</p>
                   </div>
                   <div className="flex items-center justify-center gap-2 mb-5 text-[10px] font-bold">
                     {['1 名稱／房間', '2 等待大廳', '3 遊戲'].map((label, index) => (
@@ -4680,7 +4708,7 @@
                             pattern="[0-9]*"
                             placeholder="6 位數字房間號碼"
                             aria-label="房間號碼"
-                            className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-center font-mono text-lg tracking-[0.3em] text-white outline-none focus:border-cyan-400"
+                            className="min-w-0 flex-1 rounded-xl border border-slate-700 bg-slate-950 px-3 py-3 text-center gothic-num text-lg tracking-[0.3em] text-white outline-none focus:border-cyan-400"
                           />
                           <button
                             onClick={joinRoom}
@@ -4702,7 +4730,7 @@
                         <div className="flex items-center justify-between">
                           <div>
                             <div className="text-xs text-slate-400">房間號碼</div>
-                            <div className="font-mono text-3xl font-black tracking-[0.25em] text-amber-300">{roomCode}</div>
+                            <div className="gothic-num text-3xl font-black tracking-[0.25em] text-amber-300">{roomCode}</div>
                           </div>
                           <button onClick={() => navigator.clipboard.writeText(roomCode).catch(error => setLobbyError(`複製房間號碼失敗：${error.message}`))} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold text-slate-300">複製</button>
                         </div>
@@ -4719,7 +4747,7 @@
                             </div>
                             <div className="flex items-center gap-3">
                               <button onClick={() => updateAiCount(-1)} disabled={aiCount <= 0} className="h-8 w-8 rounded-lg bg-slate-700 font-black disabled:opacity-30" aria-label="減少 AI">−</button>
-                              <span className="w-4 text-center font-mono font-black">{aiCount}</span>
+                              <span className="w-4 text-center gothic-num font-black">{aiCount}</span>
                               <button onClick={() => updateAiCount(1)} disabled={totalPlayers >= 6} className="h-8 w-8 rounded-lg bg-slate-700 font-black disabled:opacity-30" aria-label="增加 AI">＋</button>
                             </div>
                           </div>
@@ -4810,7 +4838,7 @@
                 <div className="text-4xl mb-3 animate-pulse">🌙</div>
                 <p className="text-sm font-black text-amber-300 mb-1">正在同步牌局…</p>
                 <p className="text-[11px] text-slate-400 mb-4">等待房主發牌與狀態同步</p>
-                <p className="text-[10px] font-mono text-cyan-400/80 mb-6">{version}{roomCode ? ` · 房 ${roomCode}` : ''}</p>
+                <p className="text-[10px] gothic-num text-cyan-400/80 mb-6">{version}{roomCode ? ` · 房 ${roomCode}` : ''}</p>
                 <button
                   onClick={() => setScreen('lobby')}
                   className="rounded-xl border border-slate-600 bg-slate-900 px-4 py-2 text-xs font-bold text-slate-300"
@@ -4948,7 +4976,7 @@
                           );
                         })()}
                         <div className={UI.D.d14({ player })}>
-                          <img src={AVATAR_URL(player.seed)} alt={player.name} className={UI.D.d15} />
+                          <img src={AVATAR_URL(player.id)} alt={player.name} className={UI.D.d15} />
                         </div>
                         <span className={UI.D.d16({ isTurn })}>{player.name}</span>
                       </div>
@@ -4973,9 +5001,11 @@
                       {otherPlayersOrdered.map(player => {
                         // 字級對齊中間出牌卡（title text-[9px]、數值 text-[10px]）；無牌不顯示「—」
                         const fronts = getFrontCards(player);
-                        const step = 15;
-                        const foldedH = 26;
-                        const fullH = 52;
+                        // 最新牌與自己面前／中間出牌同一固定尺寸 66×88（3:4）；闊度＝摺疊牌（欄寬 max=66）
+                        const step = 14;
+                        const foldedH = 22;
+                        const fullW = 66;
+                        const fullH = 88;
                         const n = fronts.length;
                         const stackH = n === 0 ? 0 : (n === 1 ? fullH : step * (n - 1) + fullH);
                         return (
@@ -4993,7 +5023,7 @@
                                       key={(c.id || c.title) + '-' + i}
                                       onClick={(e) => { e.stopPropagation(); setArenaFocus({ ...c, playedBy: player.name }); }}
                                       className={UI.E.e08({ borderCls })}
-                                      style={{ top: n === 1 ? 0 : step * (n - 1), height: fullH, zIndex: i + 1 }}
+                                      style={{ top: n === 1 ? 0 : step * (n - 1), width: fullW, height: fullH, zIndex: i + 1 }}
                                       title={`${c.value} ${c.title}${active ? '（生效中）' : ''}`}
                                     >
                                       <span className={UI.E.e09}>{c.value}</span>
@@ -5077,19 +5107,13 @@
                             type="button"
                             onClick={() => setArenaFocus(c)}
                             className={UI.E.e39}
+                            title={`${c.value} ${c.title}${c.playedBy ? ' · ' + c.playedBy : ''}`}
                           >
                             <div className={UI.E.e40}>
-                              <div className={UI.E.e41}>
-                                <span className={UI.E.e42}>{c.value}</span>
-                                {c.isMoon && <span className={UI.E.e43}>月</span>}
-                              </div>
-                              <div className={UI.E.e44}>
-                                <i className={UI.E.e45({ c })}></i>
-                              </div>
-                              <div className={UI.E.e46}>
-                                <div className={UI.E.e47}>{c.title}</div>
-                                <div className={UI.E.e48}>{c.playedBy || ''}</div>
-                              </div>
+                              <span className={UI.E.e42}>{c.value}</span>
+                              <i className={UI.E.e45({ c })}></i>
+                              <span className={UI.E.e47}>{c.title}</span>
+                              {c.playedBy ? <span className={UI.E.e48}>{c.playedBy}</span> : null}
                             </div>
                           </button>
                         );
@@ -5107,12 +5131,14 @@
                     const me = players.find(p => p.id === humanPlayerId);
                     const fronts = me ? getFrontCards(me) : [];
                     if (!fronts.length) return <div className={UI.E.e51} />;
-                    const cardW = 56;
+                    // 與中間出牌卡、對手最新面前牌同一組固定像素：66×88（3:4）；闊度對齊對手摺疊牌（欄寬）
+                    const cardW = 66;
+                    const cardH = 88;
                     const overlap = 18;
                     const totalW = cardW + Math.max(0, fronts.length - 1) * (cardW - overlap);
                     return (
                       <div className={UI.E.e52}>
-                        <div className={UI.E.e53} style={{ width: totalW, height: 72 }}>
+                        <div className={UI.E.e53} style={{ width: totalW, height: cardH }}>
                           {fronts.map((c, i) => {
                             const active = isCardActive(me, c);
                             return (
@@ -5121,7 +5147,7 @@
                                 key={(c.id || c.title) + '-' + i}
                                 onClick={(e) => { e.stopPropagation(); setArenaFocus({ ...c, playedBy: me.name }); }}
                                 className={UI.E.e54({ active })}
-                                style={{ left: i * (cardW - overlap), width: cardW, height: 70, zIndex: i + 1 }}
+                                style={{ left: i * (cardW - overlap), width: cardW, height: cardH, zIndex: i + 1 }}
                                 title={`${c.value} ${c.title}${active ? '（生效中）' : ''}`}
                               >
                                 <span className={UI.E.e55}>{c.value}</span>
@@ -5191,7 +5217,7 @@
                         className={UI.F.f05({ isDead, isTurn })}
                       >
                         <div className={UI.F.f06({ me })}>
-                          <img src={AVATAR_URL(me.seed)} alt={me.name} className={UI.F.f07} />
+                          <img src={AVATAR_URL(me.id)} alt={me.name} className={UI.F.f07} />
                         </div>
                         <div className={UI.F.f08}>
                           <span className={UI.F.f09({ isTurn })}>{me.name}</span>
@@ -5480,7 +5506,7 @@
                         <div className="space-y-1">
                           {RULES_CARDS.map((c, i) => (
                             <div key={i} className="flex items-start space-x-2 bg-slate-800/50 rounded p-1.5">
-                              <span className="bg-amber-500 text-slate-950 text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shrink-0 font-mono">{c.v}</span>
+                              <span className="bg-amber-500 text-slate-950 text-[10px] font-black w-5 h-5 rounded-full flex items-center justify-center shrink-0 gothic-num">{c.v}</span>
                               <div className="min-w-0">
                                 <div className="text-[11px] font-bold text-slate-100">{c.name}</div>
                                 <div className="text-[10px] text-slate-400 leading-snug">{c.d}</div>
@@ -5514,10 +5540,10 @@
                         return (
                           <div key={idx} className={`flex justify-between items-center p-1.5 rounded ${isUsedUp ? 'bg-red-950/30 opacity-50' : 'bg-slate-800/50'}`}>
                             <div className="flex items-center space-x-2">
-                              <span className={`text-[9px] w-4 h-4 rounded-full flex items-center justify-center font-mono ${isUsedUp ? 'bg-red-900 text-red-300' : 'bg-slate-700 text-slate-300'}`}>{card.value}</span>
+                              <span className={`text-[9px] w-4 h-4 rounded-full flex items-center justify-center gothic-num ${isUsedUp ? 'bg-red-900 text-red-300' : 'bg-slate-700 text-slate-300'}`}>{card.value}</span>
                               <span className={`font-bold ${isUsedUp ? 'text-red-400 line-through' : 'text-slate-200'}`}>{card.title}</span>
                             </div>
-                            <span className={`font-mono font-bold ${isUsedUp ? 'text-red-500' : 'text-cyan-400'}`}>
+                            <span className={`gothic-num font-bold ${isUsedUp ? 'text-red-500' : 'text-cyan-400'}`}>
                               {counts.current} / {counts.total}
                             </span>
                           </div>
@@ -5525,7 +5551,7 @@
                       })}
                       <div className="flex justify-between items-center px-1.5 pt-2 pb-0.5 border-t border-slate-700/70 mt-1">
                         <span className="text-[11px] font-black text-amber-300"><i className="fa-solid fa-moon mr-1"></i>月亮牌</span>
-                        <span className="font-mono font-bold text-amber-400">剩 {deck.filter(c => c && c.isMoon).length} / 3 張</span>
+                        <span className="gothic-num font-bold text-amber-400">剩 {deck.filter(c => c && c.isMoon).length} / 3 張</span>
                       </div>
                       {MOON_CARDS.map(m => {
                         const left = deck.filter(c => c && c.isMoon && c.level === m.level).length;
@@ -5536,7 +5562,7 @@
                               <span className={`text-[9px] w-4 h-4 rounded-full flex items-center justify-center ${used ? 'bg-red-900 text-red-300' : 'bg-slate-700 text-amber-300'}`}><i className="fa-solid fa-moon"></i></span>
                               <span className={`font-bold ${used ? 'text-red-400 line-through' : 'text-slate-200'}`}>{m.title}</span>
                             </div>
-                            <span className={`font-mono font-bold ${used ? 'text-red-500' : 'text-amber-400'}`}>{left} / 1</span>
+                            <span className={`gothic-num font-bold ${used ? 'text-red-500' : 'text-amber-400'}`}>{left} / 1</span>
                           </div>
                         );
                       })}
@@ -5603,12 +5629,19 @@
                 </div>
               )}
 
-              {/* 長按放大的手牌（放開即關閉） */}
+              {/* 長按放大的手牌（放開／點擊背景皆可關閉；避免 pointer 遺失時卡死） */}
               {zoomCard && (
-                <div className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-950/70 pointer-events-none">
-                  <div className="w-[250px] h-[360px] bg-slate-900 border-2 border-cyan-400 rounded-2xl p-4 flex flex-col justify-between shadow-[0_0_30px_rgba(6,182,212,0.5)]">
+                <div
+                  className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-950/70 pointer-events-auto"
+                  onClick={() => setZoomCard(null)}
+                  onPointerUp={() => setZoomCard(null)}
+                >
+                  <div
+                    className="w-[250px] h-[360px] bg-slate-900 border-2 border-cyan-400 rounded-2xl p-4 flex flex-col justify-between shadow-[0_0_30px_rgba(6,182,212,0.5)]"
+                    onClick={e => e.stopPropagation()}
+                  >
                     <div className="flex justify-between items-center">
-                      <span className="bg-cyan-500 text-slate-950 text-xl font-black w-10 h-10 rounded-full flex items-center justify-center font-mono">{zoomCard.value}</span>
+                      <span className="bg-cyan-500 text-slate-950 text-xl font-black w-10 h-10 rounded-full flex items-center justify-center gothic-num">{zoomCard.value}</span>
                       <span className="text-[11px] text-slate-400 font-bold">{zoomCard.category}</span>
                     </div>
                     <div className="w-full h-32 bg-slate-800/90 rounded-xl border border-slate-700/60 flex items-center justify-center my-2">
@@ -5618,6 +5651,11 @@
                       <div className="text-xl font-black text-slate-100 tracking-wide">{zoomCard.title}</div>
                       <div className="text-sm text-slate-300 leading-snug mt-2">{zoomCard.desc}</div>
                     </div>
+                    <button
+                      type="button"
+                      className="mt-3 w-full rounded-xl border border-cyan-500/40 bg-cyan-500/10 py-2 text-xs font-black text-cyan-200"
+                      onClick={() => setZoomCard(null)}
+                    >關閉</button>
                   </div>
                 </div>
               )}
@@ -5625,9 +5663,9 @@
               {/* 拖曳中的手牌（浮動，不影響版面） */}
               {dragGhost && (
                 <div className="fixed z-[70] pointer-events-none" style={{ left: dragGhost.x, top: dragGhost.y, transform: 'translate(-50%, -60%) rotate(-3deg) scale(0.9)' }}>
-                  <div className={`card-bg relative w-[130px] h-[190px] bg-slate-900 p-2 shadow-2xl ${dragGhost.over ? 'shadow-[0_0_22px_rgba(52,211,153,0.7)]' : ''}`}>
+                  <div className={`card-bg relative w-[130px] h-[173px] bg-slate-900 p-2 shadow-2xl ${dragGhost.over ? 'shadow-[0_0_22px_rgba(52,211,153,0.7)]' : ''}`}>
                     <div className="cd-num">
-                      <span className="text-white text-base font-black leading-none font-mono [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.value}</span>
+                      <span className="text-white text-base font-black leading-none gothic-num [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.value}</span>
                     </div>
                     <div className="cd-title text-[11px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.title}</div>
                     <div className="cd-icon">
@@ -5684,13 +5722,13 @@
                                   <span className="text-xs text-slate-400">已取走</span>
                                 ) : known ? (
                                   <div className={`flex flex-col items-center ${stale ? 'opacity-50' : ''}`}>
-                                    <span className="bg-cyan-500 text-slate-950 text-sm font-black w-7 h-7 rounded-full flex items-center justify-center font-mono">{knowledge.card.value}</span>
+                                    <span className="bg-cyan-500 text-slate-950 text-sm font-black w-7 h-7 rounded-full flex items-center justify-center gothic-num">{knowledge.card.value}</span>
                                     <i className={`fa-solid ${knowledge.card.icon} text-2xl text-cyan-300 my-1.5`}></i>
                                     <span className="text-[12px] font-black text-slate-100 leading-tight">{knowledge.card.title}</span>
                                     <span className="text-[10px] text-amber-300 mt-1">{stale ? '舊資訊' : '你看過'}</span>
                                   </div>
                                 ) : (
-                                  <FxBack cls="w-20 h-[112px]" moonCls="text-2xl" label="未知" />
+                                  <FxBack cls="w-20" moonCls="text-2xl" label="未知" />
                                 )}
                               </button>
                               <span className="text-[12px] text-amber-300 font-bold mt-2">暗牌 {i + 1}</span>
@@ -5748,7 +5786,7 @@
         function WatchCard({ c, icon, selected, onClick }) {
           return (
             <button type="button" onClick={onClick} className={`relative rounded-lg border-2 px-1.5 pt-1.5 pb-1 bg-slate-800 flex flex-col items-center gap-0.5 transition ${selected ? 'border-amber-400 ring-2 ring-amber-400/70 -translate-y-0.5' : 'border-slate-600'}`}>
-              <span className="absolute left-1.5 top-1 font-mono font-black text-amber-300 text-sm leading-none">{c.value}</span>
+              <span className="absolute left-1.5 top-1 gothic-num font-black text-amber-300 text-sm leading-none">{c.value}</span>
               <i className={`fa-solid ${icon || c.icon || 'fa-circle'} text-amber-400 text-lg mt-3`}></i>
               <span className="text-[10px] font-black text-amber-100 leading-tight">{c.title}</span>
               <span className="text-[8px] text-slate-400 leading-tight text-center">{c.desc}</span>
@@ -5857,8 +5895,8 @@
                       <div className="flex flex-col items-center gap-2 mb-4">
                         <LocalPlayerContext.Provider value={humanPlayerId}><FxChip p={modal.infoTarget} size="w-11 h-11 text-xl" /></LocalPlayerContext.Provider>
                         {modal.infoCard ? (
-                          <div className="w-[130px] h-[180px] bg-slate-900 border-2 border-cyan-500/80 rounded-xl p-2 flex flex-col justify-between shadow-[0_0_12px_rgba(6,182,212,0.3)]">
-                            <span className="bg-cyan-500 text-slate-950 text-sm font-black w-6 h-6 rounded-full flex items-center justify-center font-mono">{modal.infoCard.value}</span>
+                          <div className="w-[130px] h-[173px] bg-slate-900 border-2 border-cyan-500/80 rounded-xl p-2 flex flex-col justify-between shadow-[0_0_12px_rgba(6,182,212,0.3)]">
+                            <span className="bg-cyan-500 text-slate-950 text-sm font-black w-6 h-6 rounded-full flex items-center justify-center gothic-num">{modal.infoCard.value}</span>
                             <div className="w-full h-16 bg-slate-800/90 rounded-lg border border-slate-700/60 flex items-center justify-center my-1">
                               <i className={`fa-solid ${modal.infoCard.icon} text-3xl text-cyan-400`}></i>
                             </div>
@@ -5880,7 +5918,7 @@
                       {(modal.view || []).map(v => (
                         <div key={v.p.id} className="flex flex-col items-center gap-1 rounded-lg border border-slate-700/70 bg-slate-800/60 py-1.5">
                           <LocalPlayerContext.Provider value={humanPlayerId}><FxChip p={v.p} size="w-9 h-9 text-base" /></LocalPlayerContext.Provider>
-                          {v.card ? <FxFace c={v.card} cls="w-12 h-[64px]" /> : <span className="text-[10px] text-slate-500 h-[64px] flex items-center">無手牌</span>}
+                          {v.card ? <FxFace c={v.card} cls="w-12" /> : <span className="text-[10px] text-slate-500 h-[64px] flex items-center">無手牌</span>}
                         </div>
                       ))}
                     </div>
@@ -5909,7 +5947,7 @@
                   <div>
                     {modal.card && (
                       <div className="flex items-center gap-2 mb-3 rounded-lg border border-amber-500/40 bg-slate-800/60 px-2 py-1.5">
-                        <span className="bg-amber-500 text-slate-950 text-xs font-black w-6 h-6 rounded-full flex items-center justify-center font-mono">{modal.card.value}</span>
+                        <span className="bg-amber-500 text-slate-950 text-xs font-black w-6 h-6 rounded-full flex items-center justify-center gothic-num">{modal.card.value}</span>
                         <span className="text-xs font-black text-amber-200">{modal.card.title}</span>
                       </div>
                     )}
@@ -5953,7 +5991,7 @@
                                   const sel = selectedStolenCard === c.id;
                                   return (
                                     <button type="button" key={c.id} onClick={() => { setSelectedTarget(String(p.id)); setSelectedStolenCard(c.id); }} className={`rounded-md border-2 px-1.5 py-1 flex items-center gap-1 bg-slate-900 active:scale-95 ${sel ? 'border-amber-400 ring-2 ring-amber-400/70' : 'border-slate-600'}`}>
-                                      <span className="font-mono font-black text-amber-300 text-xs">{c.value}</span>
+                                      <span className="gothic-num font-black text-amber-300 text-xs">{c.value}</span>
                                       <i className={`fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[10px]`}></i>
                                       <span className="text-[10px] font-black text-amber-100 whitespace-nowrap">{c.title}</span>
                                     </button>
@@ -6029,7 +6067,7 @@
                                 onClick={() => setGuessedVal(String(v))}
                                 className={`rounded-lg border px-1 py-1.5 text-center active:scale-95 transition ${sel ? 'border-amber-400 bg-amber-500/20 ring-2 ring-amber-400/50' : 'border-slate-700 bg-slate-800'}`}
                               >
-                                <div className={`font-mono font-black text-sm ${sel ? 'text-amber-300' : 'text-slate-200'}`}>{v}</div>
+                                <div className={`gothic-num font-black text-sm ${sel ? 'text-amber-300' : 'text-slate-200'}`}>{v}</div>
                                 <div className="text-[8px] leading-tight text-slate-400 mt-0.5 line-clamp-2">{unseenText(v)}</div>
                               </button>
                             );
@@ -6056,7 +6094,7 @@
                                 {slot > 0 && (
                                   <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-amber-400 text-[10px] font-black text-slate-950 flex items-center justify-center shadow">{slot}</span>
                                 )}
-                                <div className={`font-mono font-black text-sm ${slot ? 'text-amber-300' : 'text-slate-200'}`}>{v}</div>
+                                <div className={`gothic-num font-black text-sm ${slot ? 'text-amber-300' : 'text-slate-200'}`}>{v}</div>
                                 <div className="text-[8px] leading-tight text-slate-400 mt-0.5 line-clamp-2">{unseenText(v)}</div>
                               </button>
                             );
