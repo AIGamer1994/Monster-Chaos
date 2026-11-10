@@ -144,8 +144,10 @@
           100% { opacity: .35; transform: scale(1.25); }
         }
         @keyframes fxDim { 0% { opacity: 1; } 100% { opacity: .38; } }
-        @keyframes btnBlinkG { 0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); border-color: rgba(16,185,129,.4); } 50% { box-shadow: 0 0 14px 3px rgba(52,211,153,.85); border-color: #6ee7b7; } }
+        @keyframes btnBlinkG { 0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); border-color: rgba(16,185,129,.35); } 50% { box-shadow: 0 0 14px 3px rgba(52,211,153,.9); border-color: #6ee7b7; } }
         @keyframes btnBlinkB { 0%, 100% { box-shadow: 0 0 0 0 rgba(96,165,250,0); border-color: rgba(59,130,246,.4); } 50% { box-shadow: 0 0 14px 3px rgba(96,165,250,.85); border-color: #93c5fd; } }
+        @keyframes btnBlinkO { 0%, 100% { box-shadow: 0 0 4px 1px rgba(251,146,60,.25); } 50% { box-shadow: 0 0 16px 4px rgba(251,146,60,.95), 0 0 28px 8px rgba(234,88,12,.5); } }
+        @keyframes turnBlinkG { 0%, 100% { box-shadow: 0 0 4px 1px rgba(52,211,153,.3); border-color: rgba(52,211,153,.55); } 50% { box-shadow: 0 0 14px 3px rgba(52,211,153,.95), 0 0 24px 6px rgba(16,185,129,.45); border-color: #6ee7b7; } }
 
 
         .history-scroll {
@@ -170,6 +172,29 @@
         const { useState, useEffect, useMemo, useRef } = React;
         // 牌桌固定 9:16 舞台（設計尺寸）：整個牌桌以此尺寸排版，再依視窗大小等比縮放（卡牌、文字一起縮放）
         const STAGE_W = 405, STAGE_H = 720;
+        // 牌桌／頭像靜態圖：在首頁與大廳預先下載，避免對局中才載入卡很久
+        const PRELOAD_ASSETS = [
+          'bg.jpg', 'card.jpg', 'cardb.jpg', 'cards.jpg',
+          'icon1.jpg', 'icon2.jpg', 'icon3.jpg', 'icon4.jpg', 'icon5.jpg', 'icon6.jpg',
+          '抽.jpg', '拿.jpg',
+        ];
+        function preloadAllAssets(onProgress) {
+          let done = 0;
+          const total = PRELOAD_ASSETS.length;
+          return Promise.all(PRELOAD_ASSETS.map((src) => new Promise((resolve) => {
+            const img = new Image();
+            const finish = () => {
+              done += 1;
+              if (typeof onProgress === 'function') onProgress(done, total, src);
+              resolve({ src, ok: true });
+            };
+            img.onload = finish;
+            img.onerror = finish; // 缺圖也算完成，不擋進房
+            // 加 cache-bust 無用；用一般路徑讓瀏覽器快取
+            img.src = src;
+          })));
+        }
+
         const LocalPlayerContext = React.createContext(0);
         const FIREBASE_CONFIG = {
           apiKey: 'AIzaSyAb_sbf1K0MiXyNa-OodtvU1YKkJ_xloFw',
@@ -593,8 +618,10 @@
         // 動畫正面小牌：與面前區同框（front-card-bg／3:4／無圓角無邊框）；卡背走 FxBack（3:4 + cardb）
         function FxFace({ c, cls = 'w-12' }) {
           if (!c) return <FxBack cls={cls} />;
+          const fill = /\bh-full\b|\bw-full\b/.test(cls || '');
+          const ratio = fill ? '' : 'aspect-[3/4]';
           return (
-            <div className={`${cls} aspect-[3/4] shrink-0 overflow-hidden front-card-bg bg-slate-900 flex flex-col items-center justify-center shadow-lg gufeng`}>
+            <div className={`${cls} ${ratio} shrink-0 overflow-hidden front-card-bg bg-slate-900 flex flex-col items-center justify-center shadow-lg gufeng`.trim()}>
               <span className="gothic-num font-black text-amber-300 text-base leading-none">{c.value}</span>
               <i className={`fa-solid ${c.icon || 'fa-circle'} text-amber-400/80 text-sm my-0.5`}></i>
               <span className="text-[9px] font-black text-amber-200 leading-none whitespace-nowrap">{c.title}</span>
@@ -681,29 +708,24 @@
               </div>
             );
           } else if (kind === 'place') {
-            // 牌打出後，縮小滑到頭像下邊的「面前」位置
+            // 牌打出後置於面前（無虛線格／「面前」字樣）
             body = (
               <div className="flex flex-col items-center gap-1.5">
-                <div className="relative w-[200px] h-[160px]">
-                  <div className="absolute left-[36px] top-0" style={an('fxInL', 0.4, 0)}><FxChip p={src} size="w-14 h-14 text-2xl" /></div>
-                  <div className="absolute left-[44px] top-[96px] w-[40px] h-[60px] rounded-md border-2 border-dashed border-slate-500/70 flex items-end justify-center" style={an('fxFadeUp', 0.4, 0.5)}>
-                    <span className="text-[8px] text-slate-500 mb-0.5">面前</span>
-                  </div>
-                  <div className="absolute left-[120px] top-0 z-10" style={an('fxPop', 0.4, 0.15)}>
-                    <div style={an('fxToFront', 0.7, 1.0, 'ease-in-out')}><FxFace c={card} cls="w-14" /></div>
-                  </div>
+                <div className="flex items-center gap-3" style={an('fxPop', 0.4, 0)}>
+                  <FxChip p={src} size="w-14 h-14 text-2xl" />
+                  <div style={an('fxPop', 0.45, 0.2)}><FxFace c={card} cls="w-14" /></div>
                 </div>
                 <div className="flex flex-wrap items-center justify-center gap-1.5">
-                  <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-500/70 text-slate-200 text-[10px] font-black" style={an('fxPop', 0.3, 1.8)}>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-800 border border-slate-500/70 text-slate-200 text-[10px] font-black" style={an('fxPop', 0.3, 0.9)}>
                     <i className="fa-solid fa-layer-group mr-1"></i>置於面前
                   </span>
                   {fx.lasting && (
-                    <span className="px-2 py-0.5 rounded-full bg-emerald-900/70 border border-emerald-500/60 text-emerald-200 text-[10px] font-black" style={an('fxPop', 0.3, 2.0)}>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-900/70 border border-emerald-500/60 text-emerald-200 text-[10px] font-black" style={an('fxPop', 0.3, 1.1)}>
                       <i className="fa-solid fa-bolt mr-1"></i>生效中
                     </span>
                   )}
                 </div>
-                <div className="text-[10px] font-black text-center px-2 text-rose-300" style={an('fxFadeUp', 0.4, 2.2)}>
+                <div className="text-[10px] font-black text-center px-2 text-rose-300" style={an('fxFadeUp', 0.4, 1.3)}>
                   沒有任何效果{fx.reason ? `（${fx.reason}）` : ''}
                 </div>
               </div>
@@ -878,7 +900,7 @@
                       const active = selectedSlot && i === fx.slot;
                       return (
                         <div key={i} className="flex flex-col items-center gap-1" style={active ? { animation: 'fxTakeSlot 1.6s ease-in-out .55s both' } : an('fxPop', 0.3, 0.2 + i * 0.1)}>
-                          <div className={active ? 'drop-shadow-[0_0_10px_#fbbf24] ring-2 ring-amber-400/80 rounded-md' : ''}>
+                          <div className={active ? 'drop-shadow-[0_0_12px_#fbbf24] ring-2 ring-amber-400 rounded-none' : 'rounded-none'}>
                             <FxBack cls="w-10" />
                           </div>
                           <span className={`text-[9px] font-black ${active ? 'text-amber-300' : 'text-slate-500'}`}>暗牌{i + 1}</span>
@@ -1013,14 +1035,6 @@
                       </div>
                     );
                   })}
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div style={an('fxShuffle', 0.9, 0.75, 'ease-in-out')}>
-                      <div className="relative w-9 h-12">
-                        <div className="absolute -left-1 -top-1"><FxBack cls="w-9" /></div>
-                        <div className="absolute left-0 top-0"><FxBack cls="w-9" /></div>
-                      </div>
-                    </div>
-                  </div>
                   {ids.map((p, i) => {
                     const { x, y } = pos(i);
                     return (
@@ -1393,6 +1407,24 @@
           const [roomData, setRoomData] = useState(null);
           const [lobbyError, setLobbyError] = useState('');
           const [lobbyBusy, setLobbyBusy] = useState(false);
+          const [assetsLoaded, setAssetsLoaded] = useState(0);
+          const [assetsTotal, setAssetsTotal] = useState(PRELOAD_ASSETS.length);
+          const [assetsReady, setAssetsReady] = useState(false);
+          // 進 App 就開始預載（首頁／大廳等待時下載），對局中不再慢載
+          useEffect(() => {
+            let cancelled = false;
+            setAssetsTotal(PRELOAD_ASSETS.length);
+            preloadAllAssets((done, total) => {
+              if (!cancelled) {
+                setAssetsLoaded(done);
+                setAssetsTotal(total);
+              }
+            }).then(() => {
+              if (!cancelled) setAssetsReady(true);
+            });
+            return () => { cancelled = true; };
+          }, []);
+
           const [nextGameBusy, setNextGameBusy] = useState(false);
           const [onlineSession, setOnlineSession] = useState(false);
           const roomRef = useRef(null);
@@ -4738,6 +4770,11 @@
                           <h2 className="text-sm font-black text-white">等待大廳</h2>
                           <span className={`text-xs font-black ${totalPlayers >= 3 ? 'text-emerald-300' : 'text-amber-300'}`}>{totalPlayers} / 6 人</span>
                         </div>
+                        <div className={`mt-2 text-[10px] font-bold ${assetsReady ? 'text-emerald-400/80' : 'text-amber-300/90'}`}>
+                          {assetsReady
+                            ? <span><i className="fa-solid fa-check mr-1"></i>牌面／頭像資源已就緒</span>
+                            : <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>預載資源中 {assetsLoaded}/{assetsTotal}（可邊等邊載）</span>}
+                        </div>
                         {/* AI 調整固定在名單上方，避免增減時按鈕跟著下移 */}
                         {isHost && roomData.status === 'lobby' && (
                           <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-700 p-3">
@@ -5203,35 +5240,7 @@
                     </div>
                   )}
 
-                  {/* F區左上：自己的頭像與狀態 */}
-                  {(() => {
-                    const me = players.find(p => p.id === humanPlayerId);
-                    if (!me) return null;
-                    const isTurn = currentTurnIndex === players.findIndex(p => p.id === humanPlayerId);
-                    const isDead = me.status === '出局';
-                    const fronts = getFrontCards(me);
-                    const activeN = fronts.filter(c => isCardActive(me, c)).length;
-                    const winN = Math.min(wins[me.id] || 0, 3);
-                    return (
-                      <div
-                        className={UI.F.f05({ isDead, isTurn })}
-                      >
-                        <div className={UI.F.f06({ me })}>
-                          <img src={AVATAR_URL(me.id)} alt={me.name} className={UI.F.f07} />
-                        </div>
-                        <div className={UI.F.f08}>
-                          <span className={UI.F.f09({ isTurn })}>{me.name}</span>
-                          <div className={UI.F.f10}>
-                            {winN > 0 && <span className={UI.F.f11}>{Array.from({ length: winN }).map((_, i) => <i key={i} className={UI.F.f12}></i>)}</span>}
-                            {activeN > 0 && <span className={UI.F.f13}><i className={UI.F.f14}></i><span>{activeN}</span></span>}
-                            {me.protected && !isDead && <span className={UI.F.f15}><i className={UI.F.f16}></i></span>}
-                            {witchTargetOwner && witchTargetOwner.targetId === me.id && <span className={UI.F.f17}><i className={UI.F.f18}></i></span>}
-                            {witchTargetOwner && witchTargetOwner.witchOwnerId === me.id && <span className={UI.F.f19}><i className={UI.F.f20}></i></span>}
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })()}
+                  
                   
                   {/* 拖曳提示（浮在 F 區上緣，不影響版面） */}
                   {myHand.filter(Boolean).length === 2 && isMyTurn && !gameOver && (
@@ -5356,37 +5365,53 @@
                     );
                   })()}
 
-                  {/* 右側浮動操作按鈕 */}
-                  <div className={UI.F.f62({ myHand })}>
-                    {myHand.length === 1 && (
-                      <>
-                        <button 
-                          onClick={handleActionA}
-                          style={isMyTurn && !gameOver && !actionLocked ? { animation: 'btnBlinkG 1.4s ease-in-out infinite' } : undefined}
-                          disabled={!isMyTurn || gameOver || actionLocked}
-                          className={UI.F.f63}
-                        >
-                          <div className={UI.F.f64}>
-                            <i className={UI.F.f65}></i>
+                  {/* 右側欄：頭像+名稱 / 抽一打一 / 拿一還一 */}
+                  <div className={UI.F.f62}>
+                    {(() => {
+                      const me = players.find(p => p.id === humanPlayerId);
+                      if (!me) return null;
+                      const isTurn = currentTurnIndex === players.findIndex(p => p.id === humanPlayerId);
+                      const isDead = me.status === '出局';
+                      const fronts = getFrontCards(me);
+                      const activeN = fronts.filter(c => isCardActive(me, c)).length;
+                      const winN = Math.min(wins[me.id] || 0, 3);
+                      return (
+                        <div className={UI.F.f05({ isDead, isTurn })}>
+                          <div className={UI.F.f06({ me })}>
+                            <img src={AVATAR_URL(me.id)} alt={me.name} className={UI.F.f07} />
                           </div>
-                          <span className={UI.F.f66}>{reserveDrawRef.current === humanPlayerId && deck.length === 0 ? '抽備用牌' : '抽一打一'}</span>
-                        </button>
-                        
-                        <button 
-                          onClick={handleActionB}
-                          style={isMyTurn && !gameOver && !actionLocked ? { animation: 'btnBlinkB 1.4s ease-in-out infinite' } : undefined}
-                          disabled={centerCards.filter(Boolean).length === 0 || !isMyTurn || gameOver || actionLocked}
-                          className={UI.F.f67}
-                        >
-                          <div className={UI.F.f68}>
-                            <i className={UI.F.f69}></i>
+                          <span className={UI.F.f09({ isTurn })}>{me.name}</span>
+                          <div className={UI.F.f10}>
+                            {winN > 0 && <span className={UI.F.f11}>{Array.from({ length: winN }).map((_, i) => <i key={i} className={UI.F.f12}></i>)}</span>}
+                            {activeN > 0 && <span className={UI.F.f13}><i className={UI.F.f14}></i><span>{activeN}</span></span>}
+                            {me.protected && !isDead && <span className={UI.F.f15}><i className={UI.F.f16}></i></span>}
+                            {witchTargetOwner && witchTargetOwner.targetId === me.id && <span className={UI.F.f17}><i className={UI.F.f18}></i></span>}
+                            {witchTargetOwner && witchTargetOwner.witchOwnerId === me.id && <span className={UI.F.f19}><i className={UI.F.f20}></i></span>}
                           </div>
-                          <span className={UI.F.f70}>拿一還一</span>
-                        </button>
-                      </>
-                    )}
-
-                                      </div>
+                        </div>
+                      );
+                    })()}
+                    <button
+                      type="button"
+                      onClick={handleActionA}
+                      title={reserveDrawRef.current === humanPlayerId && deck.length === 0 ? '抽備用牌' : '抽一打一'}
+                      disabled={myHand.length !== 1 || !isMyTurn || gameOver || actionLocked}
+                      style={myHand.length === 1 && isMyTurn && !gameOver && !actionLocked ? { animation: 'btnBlinkO 1.4s ease-in-out infinite' } : undefined}
+                      className={UI.F.f63}
+                    >
+                      <img src="抽.jpg" alt="抽一打一" className={UI.F.f63img} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleActionB}
+                      title="拿一還一"
+                      disabled={myHand.length !== 1 || centerCards.filter(Boolean).length === 0 || !isMyTurn || gameOver || actionLocked}
+                      style={myHand.length === 1 && isMyTurn && !gameOver && !actionLocked && centerCards.filter(Boolean).length > 0 ? { animation: 'btnBlinkO 1.4s ease-in-out infinite' } : undefined}
+                      className={UI.F.f67}
+                    >
+                      <img src="拿.jpg" alt="拿一還一" className={UI.F.f67img} />
+                    </button>
+                  </div>
                 </footer>
               </div>
 
@@ -5714,21 +5739,19 @@
                               <button
                                 disabled={!selectable}
                                 onClick={() => setPickSlot(i)}
-                                className={`w-full h-36 flex flex-col items-center justify-center relative transition rounded-xl border ${
-                                  selected ? 'border-amber-400 bg-amber-500/10' : 'border-slate-700/60 bg-slate-800/40'
-                                } ${!card ? 'opacity-60' : ''} ${selected ? 'drop-shadow-[0_0_12px_rgba(245,158,11,0.95)]' : ''} ${selectable ? 'cursor-pointer hover:brightness-125' : 'cursor-default'}`}
+                                className={`relative w-[120px] aspect-[3/4] flex items-center justify-center p-0 bg-transparent border-0 rounded-none transition ${
+                                  selected ? 'drop-shadow-[0_0_14px_rgba(245,158,11,0.95)] ring-2 ring-amber-400' : ''
+                                } ${!card ? 'opacity-60' : ''} ${selectable ? 'cursor-pointer hover:brightness-110' : 'cursor-default'}`}
                               >
                                 {!card ? (
                                   <span className="text-xs text-slate-400">已取走</span>
                                 ) : known ? (
-                                  <div className={`flex flex-col items-center ${stale ? 'opacity-50' : ''}`}>
-                                    <span className="bg-cyan-500 text-slate-950 text-sm font-black w-7 h-7 rounded-full flex items-center justify-center gothic-num">{knowledge.card.value}</span>
-                                    <i className={`fa-solid ${knowledge.card.icon} text-2xl text-cyan-300 my-1.5`}></i>
-                                    <span className="text-[12px] font-black text-slate-100 leading-tight">{knowledge.card.title}</span>
-                                    <span className="text-[10px] text-amber-300 mt-1">{stale ? '舊資訊' : '你看過'}</span>
+                                  <div className={`relative w-full h-full ${stale ? 'opacity-50' : ''}`}>
+                                    <FxFace c={knowledge.card} cls="w-full h-full" />
+                                    <span className="absolute bottom-1 left-0 right-0 text-center text-[9px] font-black text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">{stale ? '舊資訊' : '你看過'}</span>
                                   </div>
                                 ) : (
-                                  <FxBack cls="w-20" moonCls="text-2xl" label="未知" />
+                                  <FxBack cls="w-full h-full" />
                                 )}
                               </button>
                               <span className="text-[12px] text-amber-300 font-bold mt-2">暗牌 {i + 1}</span>

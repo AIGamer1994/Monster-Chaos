@@ -95,11 +95,14 @@
   }
 
   /* ── 生效中：純光暈（無實線邊、無 outline）── */
+  .turn-blink-g { animation: turnBlinkG 1.4s ease-in-out infinite; }
+
   .front-card-active {
     overflow: visible !important;
     z-index: 6;
     border: none !important;
     outline: none !important;
+    border-radius: 0 !important;
     /* 只有柔和外發光，沒有 0px 實線層 */
     box-shadow:
       0 0 8px 3px rgba(52, 211, 153, 0.95),
@@ -287,8 +290,8 @@
     // <section> 「出局';」
     d01: "gufeng shrink-0 px-1 py-0.5 flex items-center overflow-hidden gap-1",
     // <div>
-    d02: ({ isDead, isTurn }) => `player-box min-w-0 basis-0 flex-1 bg-slate-800/70 rounded-lg px-0.5 pt-0.5 pb-1.5 flex flex-col items-center justify-center relative transition-all duration-300 ${
-                            isTurn ? 'border-2 border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.65)] scale-[1.02]' : 'border border-slate-700/60 opacity-85'
+    d02: ({ isDead, isTurn }) => `player-box min-w-0 basis-0 flex-1 bg-slate-800/70 rounded-none px-0.5 pt-0.5 pb-1.5 flex flex-col items-center justify-center relative transition-all duration-300 ${
+                            isTurn ? 'border-2 border-emerald-400 scale-[1.02] turn-blink-g' : 'border border-slate-700/60 opacity-85'
                           } ${isDead ? 'grayscale opacity-30' : ''}`,
     // <div>
     d03: "w-full h-[10px] shrink-0 flex flex-nowrap items-center justify-center gap-[2px] overflow-hidden whitespace-nowrap text-[7px] leading-none font-bold",
@@ -483,7 +486,7 @@
   // ═══════════════ F 區｜手牌區 ═══════════════
   F: {
     // <footer>
-    f01: "gufeng h-[30%] min-h-[210px] p-2 relative shrink-0 flex items-center justify-center",
+    f01: "gufeng h-[30%] min-h-[210px] p-1.5 relative shrink-0 flex items-stretch gap-1.5",
     // <div>
     f02: "absolute inset-0 z-40 flex items-center justify-center bg-slate-950/90",
     // <button>
@@ -493,17 +496,17 @@
 
     // ── F區左上：自己的頭像與狀態 ──
     // <div>
-    f05: ({ isDead, isTurn }) => `absolute left-1.5 top-1.5 z-20 flex items-center gap-1.5 rounded-lg px-1.5 py-1 bg-slate-800/90 border transition-all ${
-                            isTurn ? 'border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.65)]' : 'border-slate-600/70'
+    f05: ({ isDead, isTurn }) => `w-[56px] h-[56px] shrink-0 flex flex-col items-center justify-center gap-0.5 rounded-none px-0.5 py-0.5 bg-slate-800/90 border transition-all overflow-hidden ${
+                            isTurn ? 'border-2 border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.65)]' : 'border border-slate-600/70'
                           } ${isDead ? 'grayscale opacity-40' : ''}`,
     // <div>
-    f06: ({ me }) => `w-8 h-8 shrink-0 rounded-full bg-gradient-to-tr ${me.gradient} p-0.5 shadow`,
+    f06: ({ me }) => `w-7 h-7 shrink-0 rounded-full bg-gradient-to-tr ${me.gradient} p-0.5 shadow`,
     // <img>
     f07: "w-full h-full rounded-full bg-slate-900 object-cover",
     // <div>
     f08: "min-w-0 flex flex-col gap-0.5",
     // <span>
-    f09: ({ isTurn }) => `text-[10px] font-black leading-none ${isTurn ? 'text-emerald-300' : 'text-sky-300'}`,
+    f09: ({ isTurn }) => `text-[8px] font-black leading-none text-center truncate w-full ${isTurn ? 'text-emerald-300' : 'text-sky-300'}`,
     // <div>
     f10: "flex flex-nowrap items-center gap-[3px] overflow-hidden whitespace-nowrap text-[8px] leading-none font-bold",
     // <span>
@@ -567,7 +570,7 @@
 
     // ── 手牌區：絕對水平居中 ──
     // <div>
-    f37: "absolute inset-0 flex items-center justify-center px-4 pointer-events-none",
+    f37: "flex-1 min-w-0 flex items-center justify-center px-1 pointer-events-none relative",
     // <div>
     f38: "flex space-x-3 items-center justify-center h-full pointer-events-auto",
     // <div>
@@ -593,7 +596,7 @@
 
     // ── 抽牌小動畫：牌背飛入 ➔ 翻面 ➔ 短暫放大 ➔ 歸位（只有玩家自己抽牌才播；AI 抽牌不公開） ──
     // <div>
-    f48: "absolute inset-0 z-[35] flex items-center justify-center pointer-events-none",
+    f48: "absolute left-0 top-0 bottom-0 right-[64px] z-[35] flex items-center justify-center pointer-events-none",
     // <div>
     f49: "relative w-[130px] h-[173px]",
     // <div>
@@ -623,23 +626,16 @@
 
     // ── 右側浮動操作按鈕 ──
     // <div>
-    f62: ({ myHand }) => `absolute right-2 top-1/2 -translate-y-1/2 w-[16%] max-w-[70px] h-[90%] flex flex-col justify-center space-y-2 z-20 p-1 ${myHand.length === 1 ? '' : 'hidden'}`,
+    // 右側欄：頭像／名稱 + 抽一打一 + 拿一還一（直角、無邊框；可動時橙色光暈）
+    f62: "w-[56px] shrink-0 flex flex-col gap-1 z-20 justify-center self-center max-h-full",
     // <button> 「抽備用牌' : '抽一打一'」
-    f63: "w-full group relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-emerald-950/40 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 rounded-xl py-2 px-1 transition-all duration-300 active:scale-95 shadow-md flex flex-col items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed",
-    // <div>
-    f64: "w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center mb-0.5 border border-emerald-400/40",
-    // <i> icon:plus
-    f65: "fa-solid fa-plus text-[10px] text-emerald-400",
-    // <span>
-    f66: "text-[9.5px] font-black text-emerald-200",
+    f63: "w-[56px] h-[56px] shrink-0 group relative overflow-hidden border-0 rounded-none p-0 transition-all duration-300 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed bg-transparent",
+    f63img: "w-full h-full object-cover block pointer-events-none",
     // <button> 「拿一還一」
-    f67: "w-full group relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-blue-950/40 border border-blue-500/40 hover:border-blue-400 text-blue-300 rounded-xl py-2 px-1 transition-all duration-300 active:scale-95 shadow-md flex flex-col items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed",
-    // <div>
-    f68: "w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center mb-0.5 border border-blue-400/40",
-    // <i> icon:hand-pointer
-    f69: "fa-solid fa-hand-pointer text-[10px] text-blue-400",
-    // <span> 「拿一還一」
-    f70: "text-[9.5px] font-black text-blue-200",
+    f67: "w-[56px] h-[56px] shrink-0 group relative overflow-hidden border-0 rounded-none p-0 transition-all duration-300 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed bg-transparent",
+    f67img: "w-full h-full object-cover block pointer-events-none",
+    // 可行動時橙色光暈
+    fBtnGlow: "shadow-[0_0_12px_3px_rgba(251,146,60,0.85),0_0_24px_6px_rgba(234,88,12,0.45)]",
   },
   };
 
