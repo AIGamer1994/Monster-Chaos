@@ -115,6 +115,11 @@
           14% { opacity: 1; }
           100% { opacity: 1; transform: translate(0, 0) scale(1) rotate(0deg); }
         }
+        /* 打到面前：原尺寸由上直飛落點（無縮放、無翻面） */
+        @keyframes fxFrontFly {
+          0% { opacity: 0.85; transform: translate(-50%, -50%) translateY(-100px); }
+          100% { opacity: 1; transform: translate(-50%, -50%) translateY(0); }
+        }
         @keyframes fxDrawPop { 0% { transform: scale(1); } 40% { transform: scale(1.14); } 75% { transform: scale(1.14); } 100% { transform: scale(1); } }
         @keyframes fxDrawGlow { 0%, 100% { box-shadow: 0 0 0 rgba(251,191,36,0); } 40%, 75% { box-shadow: 0 0 22px 4px rgba(251,191,36,.75); } }
         @keyframes fxBarGrow { 0% { width: 0; } 100% { width: var(--w); } }
@@ -176,7 +181,7 @@
         const PRELOAD_ASSETS = [
           'bg.jpg', 'card.jpg', 'cardb.jpg', 'cards.jpg',
           'icon1.jpg', 'icon2.jpg', 'icon3.jpg', 'icon4.jpg', 'icon5.jpg', 'icon6.jpg',
-          '抽.jpg', '拿.jpg',
+          '抽.png', '拿.png',
         ];
         function preloadAllAssets(onProgress) {
           let done = 0;
@@ -1849,6 +1854,109 @@
             setDrawAnim({ key: `${Date.now()}-${Math.random()}`, card, from, toX: handCount >= 2 ? 71 : 0, k });
             drawAnimTimerRef.current = setTimeout(() => { drawAnimTimerRef.current = null; setDrawAnim(null); }, Math.round(1450 * k) + 50);
           };
+          // 打到面前區的快速飛入動畫（無翻面；自己／對手／AI 全員本機播）
+          const [frontAnim, setFrontAnim] = useState(null); // { key, card, left, top, w, h, k }
+          const [frontHold, setFrontHold] = useState({}); // playerId -> 暫留面前牌（播完再摺）
+          const frontAnimTimerRef = useRef(null);
+          const frontTargetRefs = useRef({}); // playerId -> DOM
+          const frontColRefs = useRef({}); // playerId -> 對手欄
+          const frontSeenIdsRef = useRef({}); // playerId -> [cardId]
+          const frontCardsSnapRef = useRef({}); // playerId -> card[]
+          const frontAnimReadyRef = useRef(false);
+          const playFrontAnim = (card, playerId, opts = {}) => {
+            if (!card) return;
+            const run = () => {
+              const stage = stageRef.current;
+              if (!stage) return;
+              const slot = frontTargetRefs.current[playerId];
+              const col = frontColRefs.current[playerId];
+              const k = slow();
+              // 直接用落點 DOM 的視口像素（已含 stage scale），避免飛入牌比面前格小一截
+              let left = window.innerWidth / 2;
+              let top = window.innerHeight * 0.4;
+              let w = 66;
+              let h = 88;
+              const step = 14;
+              const fullH = 88;
+              // 暫留上一張完整牌時，新牌最終會落在更下方（step * prevN）
+              const prevN = opts.prevN || 0;
+              const stackShift = prevN > 0 ? step * prevN : 0;
+              if (col) {
+                const cr = col.getBoundingClientRect();
+                const sc = stageScale || 1;
+                w = Math.max(1, 66 * sc);
+                h = Math.max(1, fullH * sc);
+                left = cr.left + cr.width / 2;
+                top = cr.top + stackShift * sc + h / 2;
+              } else if (slot) {
+                const r = slot.getBoundingClientRect();
+                left = r.left + r.width / 2;
+                top = r.top + r.height / 2 + stackShift * (stageScale || 1);
+                w = Math.max(1, r.width);
+                h = Math.max(1, r.height);
+              } else if (arenaRef.current) {
+                const ar = arenaRef.current.getBoundingClientRect();
+                const isMe = playerId === humanIdRef.current;
+                left = ar.left + ar.width / 2;
+                top = ar.top + ar.height * (isMe ? 0.82 : 0.22);
+                const sc = stageScale || 1;
+                w = 66 * sc;
+                h = 88 * sc;
+              }
+              if (frontAnimTimerRef.current) clearTimeout(frontAnimTimerRef.current);
+              setFrontAnim({ key: `${Date.now()}-${Math.random()}`, card, playerId, left, top, w, h, k });
+              frontAnimTimerRef.current = setTimeout(() => {
+                frontAnimTimerRef.current = null;
+                setFrontAnim(null);
+              }, Math.round(520 * k) + 40);
+            };
+            requestAnimationFrame(() => requestAnimationFrame(run));
+          };
+          useEffect(() => {
+            if (screen === 'game') {
+              frontAnimReadyRef.current = false;
+              const t = setTimeout(() => { frontAnimReadyRef.current = true; }, 600);
+              return () => clearTimeout(t);
+            }
+            frontAnimReadyRef.current = false;
+            frontSeenIdsRef.current = {};
+            frontCardsSnapRef.current = {};
+            setFrontHold({});
+          }, [screen]);
+          useEffect(() => {
+            if (screen !== 'game') return;
+            players.forEach(p => {
+              const list = playedCardsOf(p).filter(c => c && c.id);
+              const ids = list.map(c => c.id);
+              const prevIds = frontSeenIdsRef.current[p.id] || [];
+              const prevCards = frontCardsSnapRef.current[p.id] || [];
+              const prevSet = new Set(prevIds);
+              const added = list.filter(c => !prevSet.has(c.id));
+              frontSeenIdsRef.current[p.id] = ids;
+              frontCardsSnapRef.current[p.id] = list;
+              if (!frontAnimReadyRef.current) return;
+              if (prevIds.length === 0 && ids.length > 1) return; // 整包同步略過
+              const isMe = p.id === humanIdRef.current;
+              added.forEach((c, i) => {
+                const delay = i * 70;
+                // 其他玩家：飛入播完前暫留上一版（上一張仍完整、不立刻摺上）
+                if (!isMe && prevCards.length > 0) {
+                  setFrontHold(h => ({ ...h, [p.id]: prevCards }));
+                  const holdMs = Math.round(520 * slow()) + 80 + delay;
+                  setTimeout(() => {
+                    setFrontHold(h => {
+                      if (!h[p.id]) return h;
+                      const n = { ...h };
+                      delete n[p.id];
+                      return n;
+                    });
+                  }, holdMs);
+                }
+                setTimeout(() => playFrontAnim(c, p.id, { prevN: isMe ? 0 : prevCards.length }), delay);
+              });
+            });
+          }, [players, screen]);
+
           const pausedRef = useRef(false);
           const pendingAiRef = useRef(false);
           const aiRunRef = useRef(0);
@@ -5036,9 +5144,8 @@
                   {!(gameOver && victoryDismissed) && (
                     <div className={UI.E.e05}>
                       {otherPlayersOrdered.map(player => {
-                        // 字級對齊中間出牌卡（title text-[9px]、數值 text-[10px]）；無牌不顯示「—」
-                        const fronts = getFrontCards(player);
-                        // 最新牌與自己面前／中間出牌同一固定尺寸 66×88（3:4）；闊度＝摺疊牌（欄寬 max=66）
+                        // 字級對齊中間出牌卡；飛入播完前用 frontHold 暫留上一版（上一張不立刻摺上）
+                        const fronts = frontHold[player.id] || getFrontCards(player);
                         const step = 14;
                         const foldedH = 22;
                         const fullW = 66;
@@ -5048,7 +5155,7 @@
                         return (
                           <div key={player.id} className={UI.E.e06}>
                             {n === 0 ? null : (
-                            <div className={UI.E.e07} style={{ height: stackH }}>
+                            <div className={UI.E.e07} style={{ height: stackH }} ref={el => { if (el) frontColRefs.current[player.id] = el; }}>
                               {fronts.map((c, i) => {
                                 const active = isCardActive(player, c);
                                 const isLatest = i === n - 1;
@@ -5060,7 +5167,8 @@
                                       key={(c.id || c.title) + '-' + i}
                                       onClick={(e) => { e.stopPropagation(); setArenaFocus({ ...c, playedBy: player.name }); }}
                                       className={UI.E.e08({ borderCls })}
-                                      style={{ top: n === 1 ? 0 : step * (n - 1), width: fullW, height: fullH, zIndex: i + 1 }}
+                                      style={{ top: n === 1 ? 0 : step * (n - 1), width: fullW, height: fullH, zIndex: i + 1, opacity: frontAnim && frontAnim.card && frontAnim.card.id === c.id ? 0 : 1 }}
+                                      ref={el => { if (el) frontTargetRefs.current[player.id] = el; }}
                                       title={`${c.value} ${c.title}${active ? '（生效中）' : ''}`}
                                     >
                                       <span className={UI.E.e09}>{c.value}</span>
@@ -5184,7 +5292,8 @@
                                 key={(c.id || c.title) + '-' + i}
                                 onClick={(e) => { e.stopPropagation(); setArenaFocus({ ...c, playedBy: me.name }); }}
                                 className={UI.E.e54({ active })}
-                                style={{ left: i * (cardW - overlap), width: cardW, height: cardH, zIndex: i + 1 }}
+                                style={{ left: i * (cardW - overlap), width: cardW, height: cardH, zIndex: i + 1, opacity: frontAnim && frontAnim.card && frontAnim.card.id === c.id ? 0 : 1 }}
+                                ref={i === fronts.length - 1 ? (el => { if (el) frontTargetRefs.current[me.id] = el; }) : undefined}
                                 title={`${c.value} ${c.title}${active ? '（生效中）' : ''}`}
                               >
                                 <span className={UI.E.e55}>{c.value}</span>
@@ -5399,7 +5508,7 @@
                       style={myHand.length === 1 && isMyTurn && !gameOver && !actionLocked ? { animation: 'btnBlinkO 1.4s ease-in-out infinite' } : undefined}
                       className={UI.F.f63}
                     >
-                      <img src="抽.jpg" alt="抽一打一" className={UI.F.f63img} />
+                      <img src="抽.png" alt="抽一打一" className={UI.F.f63img} />
                     </button>
                     <button
                       type="button"
@@ -5409,11 +5518,32 @@
                       style={myHand.length === 1 && isMyTurn && !gameOver && !actionLocked && centerCards.filter(Boolean).length > 0 ? { animation: 'btnBlinkO 1.4s ease-in-out infinite' } : undefined}
                       className={UI.F.f67}
                     >
-                      <img src="拿.jpg" alt="拿一還一" className={UI.F.f67img} />
+                      <img src="拿.png" alt="拿一還一" className={UI.F.f67img} />
                     </button>
                   </div>
                 </footer>
               </div>
+
+
+              {frontAnim && frontAnim.card && (
+                <div
+                  key={frontAnim.key}
+                  className="pointer-events-none fixed z-[55]"
+                  style={{
+                    left: frontAnim.left,
+                    top: frontAnim.top,
+                    width: frontAnim.w,
+                    height: frontAnim.h,
+                    animation: `fxFrontFly ${0.5 * (frontAnim.k || 1)}s ease-out both`,
+                  }}
+                >
+                  <div className="w-full h-full overflow-hidden front-card-bg bg-slate-900 flex flex-col items-center justify-center shadow-lg gufeng">
+                    <span className="gothic-num font-black text-amber-300 text-base leading-none">{frontAnim.card.value}</span>
+                    <i className={`fa-solid ${frontAnim.card.icon || 'fa-circle'} text-amber-400/80 text-sm my-0.5`}></i>
+                    <span className="text-[9px] font-black text-amber-200 leading-none whitespace-nowrap">{frontAnim.card.title}</span>
+                  </div>
+                </div>
+              )}
 
               {/* 互動彈窗: 人類玩家發動能力標的與數值選擇 */}
               {interactionModal && (
@@ -5548,7 +5678,7 @@
               {/* 彈窗 1：牌庫角色清單（初始牌庫包含3張月亮牌） */}
               {isDeckModalOpen && (
                 <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[120] flex items-center justify-center p-4">
-                  <div className="bg-slate-900 border border-cyan-500/50 rounded-2xl w-full max-w-xs p-4 shadow-2xl relative">
+                  <div className="gufeng bg-slate-900 border border-cyan-500/50 rounded-2xl w-full max-w-xs p-4 shadow-2xl relative">
                     <div className="flex justify-between items-center border-b border-slate-800 pb-2 mb-3">
                       <div className="flex items-center space-x-2">
                         <i className="fa-solid fa-layer-group text-cyan-400"></i>
@@ -5566,7 +5696,7 @@
                           <div key={idx} className={`flex justify-between items-center p-1.5 rounded ${isUsedUp ? 'bg-red-950/30 opacity-50' : 'bg-slate-800/50'}`}>
                             <div className="flex items-center space-x-2">
                               <span className={`text-[9px] w-4 h-4 rounded-full flex items-center justify-center gothic-num ${isUsedUp ? 'bg-red-900 text-red-300' : 'bg-slate-700 text-slate-300'}`}>{card.value}</span>
-                              <span className={`font-bold ${isUsedUp ? 'text-red-400 line-through' : 'text-slate-200'}`}>{card.title}</span>
+                              <span className={`gufeng font-bold ${isUsedUp ? 'text-red-400 line-through' : 'text-slate-200'}`}>{card.title}</span>
                             </div>
                             <span className={`gothic-num font-bold ${isUsedUp ? 'text-red-500' : 'text-cyan-400'}`}>
                               {counts.current} / {counts.total}
@@ -5585,7 +5715,7 @@
                           <div key={m.level} className={`flex justify-between items-center p-1.5 rounded ${used ? 'bg-red-950/30 opacity-50' : 'bg-slate-800/50'}`}>
                             <div className="flex items-center space-x-2">
                               <span className={`text-[9px] w-4 h-4 rounded-full flex items-center justify-center ${used ? 'bg-red-900 text-red-300' : 'bg-slate-700 text-amber-300'}`}><i className="fa-solid fa-moon"></i></span>
-                              <span className={`font-bold ${used ? 'text-red-400 line-through' : 'text-slate-200'}`}>{m.title}</span>
+                              <span className={`gufeng font-bold ${used ? 'text-red-400 line-through' : 'text-slate-200'}`}>{m.title}</span>
                             </div>
                             <span className={`gothic-num font-bold ${used ? 'text-red-500' : 'text-amber-400'}`}>{left} / 1</span>
                           </div>
