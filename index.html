@@ -1234,7 +1234,7 @@
           // 非全屏動畫：點擊區向下延伸覆蓋 D 區（手牌），方便大拇指點「繼續」；動畫本體仍偏上對齊 C 區
           const fxEl = full ? (
             <div
-              className={`gufeng ${replay ? 'fx-hold' : ''} fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-sm pointer-events-auto flex justify-center items-center ${canDismiss || replay ? 'cursor-pointer' : ''}`}
+              className={`gufeng ${replay ? 'fx-hold' : ''} fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-sm pointer-events-auto flex justify-center items-center ${canDismiss || replay ? 'cursor-pointer' : ''}`}
               style={replay ? undefined : (fx.sticky ? { animation: 'fxIn .25s linear both' } : { animation: `fxIn .25s linear both, fxOut .3s linear ${Math.max(0, fx.duration + (fx.hold !== undefined ? fx.hold : fxHold(fx)) - 300) / 1000}s forwards` })}
               onClick={handleClick}
             >
@@ -1294,7 +1294,7 @@
               </div>
             </div>
           );
-                    const contextualFx = <LocalPlayerContext.Provider value={localPlayerId}>{fxEl}</LocalPlayerContext.Provider>;
+          const contextualFx = <LocalPlayerContext.Provider value={localPlayerId}>{fxEl}</LocalPlayerContext.Provider>;
           // 全屏效果一律掛到 body，避免被 #wm-stage 的 transform 建立 stacking context 限制；
           // 非全屏效果維持掛在 #wm-stage 內（跟著舞台縮放與點擊區）。
           const portalTarget = full
@@ -1306,6 +1306,7 @@
         // ==== FX END ====
 
         function RichLog({ text, nameClass = 'text-amber-300', localPlayerName = null }) {
+
           if (text === undefined || text === null) return null;
           const rawText = String(text);
           const str = localPlayerName && localPlayerName !== '你'
@@ -1856,6 +1857,7 @@
           // 打到面前區的快速飛入動畫（無翻面；自己／對手／AI 全員本機播）
           const [frontAnim, setFrontAnim] = useState(null); // { key, card, left, top, w, h, k }
           const [frontHold, setFrontHold] = useState({}); // playerId -> 暫留面前牌（播完再摺）
+          const [frontHideKeys, setFrontHideKeys] = useState({}); // cardKey -> true，飛入中隱藏實卡（防閃入）
           const frontAnimTimerRef = useRef(null);
           const frontTargetRefs = useRef({}); // playerId -> DOM
           const frontColRefs = useRef({}); // playerId -> 對手欄
@@ -1872,40 +1874,45 @@
                 if (typeof onDone === 'function') onDone();
                 return;
               }
+              const arena = arenaRef.current;
+              const originEl = arena || stage;
+              const or = originEl.getBoundingClientRect();
+              const sc = stageScale || 1;
+              // 相對 E 區（main）的本地座標；parent 在 scale 舞台內，除以 scale 還原
+              const toLocal = (clientX, clientY) => ({
+                x: (clientX - or.left) / sc,
+                y: (clientY - or.top) / sc,
+              });
               const slot = frontTargetRefs.current[playerId];
               const col = frontColRefs.current[playerId];
               const k = slow();
-              // 直接用落點 DOM 的視口像素（已含 stage scale），避免飛入牌比面前格小一截
-              let left = window.innerWidth / 2;
-              let top = window.innerHeight * 0.4;
+              let left = (or.width / sc) / 2;
+              let top = (or.height / sc) * 0.42;
               let w = 72;
               let h = 96;
               const step = 14;
-              const fullH = 96;
-              // 暫留上一張完整牌時，新牌最終會落在更下方（step * prevN）
               const prevN = opts.prevN || 0;
               const stackShift = prevN > 0 ? step * prevN : 0;
               if (col) {
                 const cr = col.getBoundingClientRect();
-                const sc = stageScale || 1;
-                w = Math.max(1, 72 * sc);
-                h = Math.max(1, fullH * sc);
-                left = cr.left + cr.width / 2;
-                top = cr.top + stackShift * sc + h / 2;
+                w = 72;
+                h = 96;
+                const mid = toLocal(cr.left + cr.width / 2, cr.top + stackShift * sc + (h * sc) / 2);
+                left = mid.x;
+                top = mid.y;
               } else if (slot) {
                 const r = slot.getBoundingClientRect();
-                left = r.left + r.width / 2;
-                top = r.top + r.height / 2 + stackShift * (stageScale || 1);
-                w = Math.max(1, r.width);
-                h = Math.max(1, r.height);
-              } else if (arenaRef.current) {
-                const ar = arenaRef.current.getBoundingClientRect();
+                w = Math.max(1, r.width / sc);
+                h = Math.max(1, r.height / sc);
+                const mid = toLocal(r.left + r.width / 2, r.top + r.height / 2 + stackShift * sc);
+                left = mid.x;
+                top = mid.y;
+              } else {
                 const isMe = playerId === humanIdRef.current;
-                left = ar.left + ar.width / 2;
-                top = ar.top + ar.height * (isMe ? 0.82 : 0.22);
-                const sc = stageScale || 1;
-                w = 72 * sc;
-                h = 96 * sc;
+                top = (or.height / sc) * (isMe ? 0.82 : 0.22);
+                left = (or.width / sc) / 2;
+                w = 72;
+                h = 96;
               }
               if (frontAnimTimerRef.current) clearTimeout(frontAnimTimerRef.current);
               setFrontAnim({ key: `${Date.now()}-${Math.random()}`, card, playerId, left, top, w, h, k });
@@ -1913,10 +1920,19 @@
                 frontAnimTimerRef.current = null;
                 setFrontAnim(null);
                 if (playerId != null) {
-                  setFrontHold(h => {
-                    if (!h[playerId]) return h;
-                    const n = { ...h };
+                  setFrontHold(hld => {
+                    if (!hld[playerId]) return hld;
+                    const n = { ...hld };
                     delete n[playerId];
+                    return n;
+                  });
+                }
+                const hk = opts && opts.hideKey;
+                if (hk) {
+                  setFrontHideKeys(h => {
+                    if (!h[hk]) return h;
+                    const n = { ...h };
+                    delete n[hk];
                     return n;
                   });
                 }
@@ -1951,6 +1967,7 @@
             frontSeenIdsRef.current = {};
             frontCardsSnapRef.current = {};
             setFrontHold({});
+            setFrontHideKeys({});
           }, [screen]);
           useEffect(() => {
             if (screen !== 'game') return;
@@ -1977,13 +1994,15 @@
               if (prevKeys.length === 0 && keys.length >= 2) return;
               const isMe = p.id === humanIdRef.current;
               added.forEach((item, ai) => {
-                const { c } = item;
+                const { c, k } = item;
                 if (!c) return;
+                // A：同一輪就標記隱藏實卡，避免先閃出再飛入
+                if (k) setFrontHideKeys(h => ({ ...h, [k]: true }));
                 if (!isMe && prevCards.length > 0) {
                   setFrontHold(h => ({ ...h, [p.id]: prevCards }));
                 }
                 setTimeout(() => {
-                  enqueueFrontAnim(c, p.id, { prevN: isMe ? 0 : prevCards.length });
+                  enqueueFrontAnim(c, p.id, { prevN: isMe ? 0 : prevCards.length, hideKey: k });
                 }, ai * 100);
               });
             });
@@ -5163,6 +5182,27 @@
 
                 {/* E區: 面前區 — 上：各對手面前牌（對齊 D）；中：出牌／動畫；下：自己面前牌 */}
                 <main ref={arenaRef} className={UI.E.e01}>
+                  {/* 面前飛入：與效果同層（舞台／E 區 absolute），z 低於效果 */}
+                  {frontAnim && frontAnim.card && (
+                    <div
+                      key={frontAnim.key}
+                      className="pointer-events-none absolute z-[25]"
+                      style={{
+                        left: frontAnim.left,
+                        top: frontAnim.top,
+                        width: frontAnim.w,
+                        height: frontAnim.h,
+                        animation: `fxFrontFly ${0.5 * (frontAnim.k || 1)}s ease-out both`,
+                      }}
+                    >
+                      <div className="w-full h-full overflow-hidden front-card-bg bg-slate-900 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 shadow-lg gufeng">
+                        <span className="gothic-num font-black text-amber-300 text-[14px] leading-none mb-1">{frontAnim.card.value}</span>
+                        <i className={`fa-solid ${frontAnim.card.icon || 'fa-circle'} text-amber-400 text-[14px] my-1.5`}></i>
+                        <span className="text-[12px] font-black text-amber-100 leading-tight text-center truncate w-full mt-1">{frontAnim.card.title}</span>
+                      </div>
+                    </div>
+                  )}
+
                   <div className={UI.E.e02}></div>
 
                   {/* 拖曳手牌時的放開區提示 */}
@@ -5199,7 +5239,7 @@
                                       key={(c.id || c.title) + '-' + i}
                                       onClick={(e) => { e.stopPropagation(); setArenaFocus({ ...c, playedBy: player.name }); }}
                                       className={UI.E.e08({ borderCls })}
-                                      style={{ top: n === 1 ? 0 : step * (n - 1), width: fullW, height: fullH, zIndex: i + 1, opacity: frontAnim && frontAnim.card && frontAnim.card.id === c.id ? 0 : 1 }}
+                                      style={{ top: n === 1 ? 0 : step * (n - 1), width: fullW, height: fullH, zIndex: i + 1, opacity: (frontHideKeys[(c && c.id != null && c.id !== '') ? String(c.id) : `${c.title}|${c.value}|${c.icon || ''}`] || (frontAnim && frontAnim.card && frontAnim.card.id && frontAnim.card.id === c.id)) ? 0 : 1 }}
                                       ref={el => { if (el) frontTargetRefs.current[player.id] = el; }}
                                       title={`${c.value} ${c.title}${active ? '（生效中）' : ''}`}
                                     >
@@ -5324,7 +5364,7 @@
                                 key={(c.id || c.title) + '-' + i}
                                 onClick={(e) => { e.stopPropagation(); setArenaFocus({ ...c, playedBy: me.name }); }}
                                 className={UI.E.e54({ active })}
-                                style={{ left: i * (cardW - overlap), width: cardW, height: cardH, zIndex: i + 1, opacity: frontAnim && frontAnim.card && frontAnim.card.id === c.id ? 0 : 1 }}
+                                style={{ left: i * (cardW - overlap), width: cardW, height: cardH, zIndex: i + 1, opacity: (frontHideKeys[(c && c.id != null && c.id !== '') ? String(c.id) : `${c.title}|${c.value}|${c.icon || ''}`] || (frontAnim && frontAnim.card && frontAnim.card.id && frontAnim.card.id === c.id)) ? 0 : 1 }}
                                 ref={i === fronts.length - 1 ? (el => { if (el) frontTargetRefs.current[me.id] = el; }) : undefined}
                                 title={`${c.value} ${c.title}${active ? '（生效中）' : ''}`}
                               >
@@ -5556,26 +5596,6 @@
                 </footer>
               </div>
 
-
-              {frontAnim && frontAnim.card && (
-                <div
-                  key={frontAnim.key}
-                  className="pointer-events-none fixed z-[20]"
-                  style={{
-                    left: frontAnim.left,
-                    top: frontAnim.top,
-                    width: frontAnim.w,
-                    height: frontAnim.h,
-                    animation: `fxFrontFly ${0.5 * (frontAnim.k || 1)}s ease-out both`,
-                  }}
-                >
-                  <div className="w-full h-full overflow-hidden front-card-bg bg-slate-900 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 shadow-lg gufeng">
-                    <span className="gothic-num font-black text-amber-300 text-[14px] leading-none mb-1">{frontAnim.card.value}</span>
-                    <i className={`fa-solid ${frontAnim.card.icon || 'fa-circle'} text-amber-400 text-[14px] my-1.5`}></i>
-                    <span className="text-[12px] font-black text-amber-100 leading-tight text-center truncate w-full mt-1">{frontAnim.card.title}</span>
-                  </div>
-                </div>
-              )}
 
               {/* 互動彈窗: 人類玩家發動能力標的與數值選擇 */}
               {interactionModal && (
