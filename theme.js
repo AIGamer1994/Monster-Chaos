@@ -19,7 +19,7 @@
  *
  * 樣式皆為 Tailwind 工具類別（Tailwind CDN 於執行時掃描 DOM，直接改字串即生效）。
  *   顏色：bg-* / text-* / border-* / from-* via-* to-* / shadow-[…]
- *   字體：text-[10px] / text-xs / font-black / font-mono / tracking-* / leading-*
+ *   字體：text-[10px] / text-xs / font-black / gothic-num / tracking-* / leading-*
  *   邊框：border / border-2 / border-b / border-dashed / rounded-*
  *
  * 另含 A–F 專用的自訂 CSS（手牌選中、出局／復活亮燈、桌面外框），載入時自動注入 <head>。
@@ -34,7 +34,7 @@
      一張圖覆蓋 A–F 全部區域；上面蓋一層半透明深色遮罩讓文字清楚。
      調整遮罩濃度改 --ov（0 = 無遮罩，1 = 全黑）。圖片不存在時自動退回原本的漸層底色。 */
   .table-bg {
-    --ov: .35;
+    --ov: .0;
     background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('bg.jpg'), linear-gradient(to bottom, #0f172a, #020617, #0f172a);
     background-size: cover, cover, 100% 100%;
     background-position: center, center, center;
@@ -43,12 +43,27 @@
 
   /* ── A–F 區古風字體（只設在區塊根節點讓子層繼承，Font Awesome 圖示不受影響）── */
   .gufeng { font-family: 'LXGW WenKai TC', 'Kaiti TC', 'STKaiti', 'DFKai-SB', 'BiauKai', 'Noto Serif TC', 'Songti TC', serif; }
+  /* 全介面中文預設文楷；數字仍用 .gothic-num 覆蓋 */
+  .stage-root, .stage-root button, .stage-root input, .stage-root select, .stage-root textarea {
+    font-family: 'LXGW WenKai TC', 'Kaiti TC', 'STKaiti', 'DFKai-SB', 'BiauKai', 'Noto Serif TC', 'Songti TC', serif;
+  }
+  .stage-root .gothic-num, .gothic-num {
+    font-family: 'UnifrakturCook', 'UnifrakturMaguntia', 'Old English Text MT', 'Cloister Black', 'Gothic', serif !important;
+  }
 
-  /* ── 手牌背景圖（檔案放在 index.html 同一資料夾：card.jpg，建議 130x190）──
+  /* ── 哥德式數字（UnifrakturCook 黑哥德體；用於卡面數值、牌庫、結算、動畫等所有數字）── */
+  .gothic-num {
+    font-family: 'UnifrakturCook', 'UnifrakturMaguntia', 'Old English Text MT', 'Cloister Black', 'Gothic', serif;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    font-variant-numeric: normal;
+  }
+
+  /* ── 手牌背景圖（檔案放在 index.html 同一資料夾：card.jpg，建議 130x173（3:4））──
      套用在：F 區手牌、抽牌動畫牌面、點開的放大檢視。--ov 為深色遮罩濃度（0 = 無遮罩，1 = 全黑）。
      圖片不存在時自動退回原本的深色底（bg-slate-900）。 */
   .card-bg {
-    --ov: 0;
+    --ov: .2;
     background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('card.jpg');
     background-size: cover, cover;
     background-position: center, center;
@@ -63,9 +78,48 @@
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    min-height: 0;
   }
 
-  /* ── 牌面各元素對齊 card.jpg 的格仔（百分比 = 佔整張 130x190 卡的比例；要微調就改這裡）──
+  /* ── 面前區／動畫正面小牌背景（cards.jpg；與手牌 card.jpg、牌背 cardb.jpg 分開）──
+     無圓角無外框由 class 控制；比例統一 3:4。 */
+  .front-card-bg {
+    --ov: .25;
+    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('cards.jpg');
+    background-size: cover, cover;
+    background-position: center, center;
+    background-repeat: no-repeat;
+  }
+
+  /* ── 面前區「上方摺疊條」：只用 cards.jpg 最上方一段作背景 ──
+     寬度與完整面前牌相同；高度為摺疊條；圖由上往下裁。 */
+  .front-card-top {
+    --ov: .2;
+    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('cards.jpg');
+    background-size: 100% auto, 100% auto;
+    background-position: center top, center top;
+    background-repeat: no-repeat, no-repeat;
+  }
+
+  /* ── 生效中：純光暈（無實線邊、無 outline）── */
+  .turn-blink-g { animation: turnBlinkG 1.4s ease-in-out infinite; }
+
+  .front-card-active {
+    overflow: visible !important;
+    z-index: 6;
+    border: none !important;
+    outline: none !important;
+    border-radius: 0 !important;
+    /* 只有柔和外發光，沒有 0px 實線層 */
+    box-shadow:
+      0 0 8px 3px rgba(52, 211, 153, 0.95),
+      0 0 18px 6px rgba(16, 185, 129, 0.7),
+      0 0 32px 12px rgba(52, 211, 153, 0.45),
+      0 0 48px 16px rgba(110, 231, 183, 0.25);
+    filter: drop-shadow(0 0 6px rgba(52, 211, 153, 0.9));
+  }
+
+  /* ── 牌面各元素對齊 card.jpg 的格仔（百分比 = 佔整張 130x173 卡的比例；要微調就改這裡）──
      cd-num   數字 → 左上紅圈中心
      cd-title 卡名 → 右上暗紅橫幅
      cd-icon  圖示 → 中間大黑窗中心
@@ -113,7 +167,7 @@
     const lk = document.createElement('link');
     lk.id = 'ui-theme-font';
     lk.rel = 'stylesheet';
-    lk.href = 'https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&display=swap';
+    lk.href = 'https://fonts.googleapis.com/css2?family=LXGW+WenKai+TC:wght@400;700&family=UnifrakturCook:wght@700&display=swap';
     document.head.appendChild(lk);
   }
 
@@ -123,7 +177,7 @@
     // <div>
     r01: "fixed inset-0 flex items-center justify-center overflow-hidden bg-slate-950 text-slate-100 select-none touch-manipulation pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)]",
     // <div>
-    r02: "table-bg mobile-container shrink-0 flex flex-col justify-between relative overflow-hidden",
+    r02: "stage-root table-bg mobile-container shrink-0 flex flex-col justify-between relative overflow-hidden gufeng",
   },
 
   // ═══════════════ A 區｜版本設定區 ═══════════════
@@ -133,7 +187,7 @@
     // <div>
     a02: "flex items-center",
     // <span>
-    a03: "text-[10px] font-mono font-bold text-cyan-400 tracking-tight",
+    a03: "text-[10px] gothic-num font-bold text-cyan-400 tracking-tight",
     // <div>
     a04: "flex items-center space-x-1.5",
     // <button> 「返回大廳」
@@ -143,7 +197,7 @@
     // <button> 「動態」
     a07: ({ showBroadcast }) => `flex items-center justify-center h-6 whitespace-nowrap border text-[10px] font-bold px-1.5 rounded-md shadow-sm active:scale-95 ${showBroadcast ? 'bg-emerald-500/25 border-emerald-400/70 text-emerald-200' : 'bg-slate-800/90 border-slate-600/60 text-slate-400'}`,
     // <button>
-    a08: ({ speed, v }) => `flex items-center justify-center h-6 whitespace-nowrap border text-[10px] font-mono font-bold px-1.5 rounded-md shadow-sm active:scale-95 ${speed === v ? 'bg-sky-500/25 border-sky-400/80 text-sky-200' : 'bg-slate-800/90 border-slate-500/50 text-slate-400'}`,
+    a08: ({ speed, v }) => `flex items-center justify-center h-6 whitespace-nowrap border text-[10px] gothic-num font-bold px-1.5 rounded-md shadow-sm active:scale-95 ${speed === v ? 'bg-sky-500/25 border-sky-400/80 text-sky-200' : 'bg-slate-800/90 border-slate-500/50 text-slate-400'}`,
     // <button> 「規則」
     a09: "flex items-center justify-center h-6 gap-1 whitespace-nowrap bg-slate-800/90 border border-amber-500/40 text-amber-300 text-[11px] px-2 rounded-md shadow-sm active:scale-95",
     // <i> icon:book-open
@@ -209,7 +263,7 @@
     // <span> 「月亮」
     c04: "text-slate-400",
     // <span>
-    c05: "font-mono text-amber-400 font-bold",
+    c05: "gothic-num text-amber-400 font-bold",
     // <div>
     c06: "flex items-center space-x-1",
     // <div>
@@ -219,7 +273,7 @@
     // <span> 「備用」
     c09: "font-bold text-cyan-300",
     // <span>
-    c10: "font-mono text-cyan-400",
+    c10: "gothic-num text-cyan-400",
     // <button> 「暗牌」
     c11: "flex items-center justify-center h-[22px] space-x-1 bg-slate-900/90 border border-amber-500/50 hover:border-amber-400 px-2 rounded-full text-[9.5px] shadow active:scale-95 transition-all cursor-pointer",
     // <i> icon:eye
@@ -227,7 +281,7 @@
     // <span> 「暗牌」
     c13: "font-bold text-amber-300",
     // <span>
-    c14: "font-mono text-amber-400",
+    c14: "gothic-num text-amber-400",
     // <button> 「牌庫」
     c15: "flex items-center justify-center h-[22px] space-x-1 bg-slate-900/90 border border-amber-500/50 hover:border-amber-400 px-2 rounded-full text-[9.5px] shadow active:scale-95 transition-all cursor-pointer",
     // <i> icon:layer-group
@@ -235,7 +289,7 @@
     // <span> 「牌庫」
     c17: "font-bold text-amber-300",
     // <span>
-    c18: "font-mono text-amber-400",
+    c18: "gothic-num text-amber-400",
   },
 
   // ═══════════════ D 區｜其他玩家 ═══════════════
@@ -243,8 +297,8 @@
     // <section> 「出局';」
     d01: "gufeng shrink-0 px-1 py-0.5 flex items-center overflow-hidden gap-1",
     // <div>
-    d02: ({ isDead, isTurn }) => `player-box min-w-0 basis-0 flex-1 bg-slate-800/70 rounded-lg px-0.5 pt-0.5 pb-1.5 flex flex-col items-center justify-center relative transition-all duration-300 ${
-                            isTurn ? 'border-2 border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.65)] scale-[1.02]' : 'border border-slate-700/60 opacity-85'
+    d02: ({ isDead, isTurn }) => `player-box min-w-0 basis-0 flex-1 bg-slate-800/70 rounded-none px-0.5 pt-0.5 pb-1.5 flex flex-col items-center justify-center relative transition-all duration-300 ${
+                            isTurn ? 'border-2 border-emerald-400 scale-[1.02] turn-blink-g' : 'border border-slate-700/60 opacity-85'
                           } ${isDead ? 'grayscale opacity-30' : ''}`,
     // <div>
     d03: "w-full h-[10px] shrink-0 flex flex-nowrap items-center justify-center gap-[2px] overflow-hidden whitespace-nowrap text-[7px] leading-none font-bold",
@@ -269,11 +323,11 @@
     // <i> icon:hat-wizard
     d13: "fa-solid fa-hat-wizard",
     // <div>
-    d14: ({ player }) => `w-6 h-6 shrink-0 rounded-full bg-gradient-to-tr ${player.gradient} p-0.5 shadow`,
+    d14: ({ player }) => `w-9 h-9 shrink-0 rounded-full bg-gradient-to-tr ${player.gradient} p-0.5 shadow`,
     // <img>
-    d15: "w-full h-full rounded-full bg-slate-900",
+    d15: "w-full h-full rounded-full bg-slate-900 object-cover",
     // <span>
-    d16: ({ isTurn }) => `text-[9px] truncate w-full text-center leading-none mt-0.5 mb-0.5 ${isTurn ? 'font-black text-emerald-300' : 'font-bold text-slate-200'}`,
+    d16: ({ isTurn }) => `text-[12px] truncate w-full text-center leading-tight mt-0.5 mb-0.5 ${isTurn ? 'font-black text-emerald-300' : 'font-bold text-slate-200'}`,
   },
 
   // ═══════════════ E 區｜面前區（對手面前牌／出牌動畫區／自己面前牌） ═══════════════
@@ -297,17 +351,17 @@
     // <div>
     e07: "relative w-full max-w-[72px] mx-auto",
     // <button>
-    e08: ({ borderCls }) => `absolute left-1/2 -translate-x-1/2 w-[96%] rounded-md bg-slate-900 shadow flex flex-col items-center justify-center px-0.5 py-0.5 active:scale-95 ${borderCls}`,
+    e08: ({ borderCls }) => `absolute left-1/2 -translate-x-1/2 front-card-bg bg-slate-900 shadow flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 active:scale-95 ${borderCls}`,
     // <span>
-    e09: "font-mono font-black text-amber-300 text-[10px] leading-none tabular-nums",
+    e09: "gothic-num font-black text-amber-300 text-[14px] leading-none tabular-nums mb-1",
     // <i> icon:circle
-    e10: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[11px] my-0.5`,
+    e10: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[14px] my-1.5`,
     // <span>
-    e11: "text-[9px] font-black text-amber-100 leading-none text-center truncate w-full px-0.5",
+    e11: "text-[12px] font-black text-amber-100 leading-tight text-center truncate w-full px-0.5 mt-1",
     // <button>
-    e12: ({ borderCls }) => `absolute left-1/2 -translate-x-1/2 w-[96%] rounded-md bg-slate-900 shadow flex items-start overflow-hidden active:scale-95 ${borderCls}`,
+    e12: ({ borderCls }) => `absolute left-1/2 -translate-x-1/2 w-full front-card-top bg-slate-900 shadow flex items-start active:scale-95 ${borderCls}`,
     // <span>
-    e13: "w-[20px] shrink-0 text-center font-mono font-black text-amber-300 text-[10px] leading-none pt-0.5 tabular-nums",
+    e13: "w-[20px] shrink-0 text-center gothic-num font-black text-amber-300 text-[10px] leading-none pt-0.5 tabular-nums",
     // <span>
     e14: "flex-1 min-w-0 text-center font-black text-amber-100 text-[9px] leading-none pt-0.5 truncate pr-0.5",
 
@@ -361,23 +415,23 @@
     // <span> 「備用」
     e38: "text-slate-400",
     // <button> 「月」
-    e39: "relative w-[96px] h-[140px] rounded-xl border-2 border-amber-400/90 bg-slate-900 shadow-xl overflow-hidden active:scale-95 animate-card-play select-none",
+    e39: "relative w-[72px] h-[96px] front-card-bg bg-slate-900 shadow overflow-hidden active:scale-95 animate-card-play select-none",
     // <div>
-    e40: "h-full p-1.5 flex flex-col justify-between",
+    e40: "h-full px-0.5 py-0.5 flex flex-col items-center justify-center gap-0.5",
     // <div>
     e41: "flex items-start justify-between gap-0.5",
     // <span>
-    e42: "bg-amber-500 text-slate-950 text-[10px] font-black min-w-[18px] h-[18px] px-0.5 rounded-full flex items-center justify-center font-mono",
+    e42: "gothic-num font-black text-amber-300 text-[14px] leading-none mb-1",
     // <span> 「月」
     e43: "text-[8px] text-amber-300 font-bold",
     // <div>
     e44: "flex-1 flex items-center justify-center",
     // <i> icon:circle
-    e45: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-lg text-amber-400/85`,
+    e45: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[14px] my-1.5`,
     // <div>
     e46: "text-center",
     // <div>
-    e47: "text-[9px] font-black text-amber-200 leading-tight truncate",
+    e47: "text-[12px] font-black text-amber-100 leading-tight text-center truncate w-full mt-1",
     // <div>
     e48: "text-[8px] text-slate-400 truncate",
     // <div>
@@ -393,23 +447,23 @@
     // <div>
     e53: "relative",
     // <button>
-    e54: ({ active }) => `absolute top-0 rounded-md border-2 bg-slate-900 shadow flex flex-col items-center justify-center px-1 py-1 active:scale-95 ${active ? 'border-emerald-400' : 'border-amber-400/80'}`,
+    e54: ({ active }) => `absolute top-0 front-card-bg bg-slate-900 shadow flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 active:scale-95 ${active ? 'front-card-active' : ''}`,
     // <span>
-    e55: "font-mono font-black text-amber-300 text-[10px] leading-none",
+    e55: "gothic-num font-black text-amber-300 text-[14px] leading-none mb-1",
     // <i> icon:circle
-    e56: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[11px] my-0.5`,
+    e56: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[14px] my-1.5`,
     // <span>
-    e57: "text-[9px] font-black text-amber-100 leading-none text-center truncate w-full",
+    e57: "text-[12px] font-black text-amber-100 leading-tight text-center truncate w-full mt-1",
 
     // ── 點面前的牌：完整檢視（數值／圖示／名稱／說明） ──
     // <div>
     e58: "fixed inset-0 z-[120] flex items-center justify-center bg-black/55",
     // <div>
-    e59: "card-bg relative w-[130px] h-[190px] bg-slate-900 p-2 flex flex-col justify-between shadow-2xl animate-arena-focus",
+    e59: "card-bg relative w-[130px] h-[173px] bg-slate-900 p-2 flex flex-col justify-between shadow-2xl animate-arena-focus",
     // <div>
     e60: "contents",
     // <span>
-    e61: "cd-num text-white text-base font-black leading-none font-mono [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
+    e61: "cd-num text-white text-base font-black leading-none gothic-num [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <span>
     e62: "absolute right-[14%] top-[16%] text-[10px] font-bold text-amber-300 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <div>
@@ -433,13 +487,13 @@
     e71: "absolute -top-2 -right-2 w-7 h-7 rounded-full bg-slate-800 border border-slate-600 text-slate-300 text-xs font-black",
 
     // ── 面前牌堆邊框（原本在 JSX 內的 borderCls）──
-    stackBorder: (active) => active ? 'border-2 border-emerald-400' : 'border-2 border-amber-400/80',
+    stackBorder: (active) => active ? 'front-card-active' : '',
   },
 
   // ═══════════════ F 區｜手牌區 ═══════════════
   F: {
     // <footer>
-    f01: "gufeng h-[30%] min-h-[210px] p-2 relative shrink-0 flex items-center justify-center",
+    f01: "gufeng stage-f h-[30%] min-h-[210px] p-1.5 relative shrink-0",
     // <div>
     f02: "absolute inset-0 z-40 flex items-center justify-center bg-slate-950/90",
     // <button>
@@ -449,19 +503,19 @@
 
     // ── F區左上：自己的頭像與狀態 ──
     // <div>
-    f05: ({ isDead, isTurn }) => `absolute left-1.5 top-1.5 z-20 flex items-center gap-1.5 rounded-lg px-1.5 py-1 bg-slate-800/90 border transition-all ${
-                            isTurn ? 'border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.65)]' : 'border-slate-600/70'
+    f05: ({ isDead, isTurn }) => `relative w-[52px] h-[56px] shrink-0 flex flex-col items-center justify-center gap-0.5 rounded-none px-0.5 py-0.5 bg-slate-800/90 border transition-all overflow-hidden ${
+                            isTurn ? 'border-2 border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.65)]' : 'border border-slate-600/70'
                           } ${isDead ? 'grayscale opacity-40' : ''}`,
     // <div>
     f06: ({ me }) => `w-8 h-8 shrink-0 rounded-full bg-gradient-to-tr ${me.gradient} p-0.5 shadow`,
     // <img>
-    f07: "w-full h-full rounded-full bg-slate-900",
+    f07: "w-full h-full rounded-full bg-slate-900 object-cover",
     // <div>
     f08: "min-w-0 flex flex-col gap-0.5",
     // <span>
-    f09: ({ isTurn }) => `text-[10px] font-black leading-none ${isTurn ? 'text-emerald-300' : 'text-sky-300'}`,
+    f09: ({ isTurn }) => `text-[12px] font-black leading-tight text-center truncate w-full ${isTurn ? 'text-emerald-300' : 'text-sky-300'}`,
     // <div>
-    f10: "flex flex-nowrap items-center gap-[3px] overflow-hidden whitespace-nowrap text-[8px] leading-none font-bold",
+    f10: "absolute top-0 left-0 z-10 flex flex-wrap items-center gap-px max-w-full overflow-hidden text-[8px] leading-none font-bold pointer-events-none",
     // <span>
     f11: "flex items-center gap-px text-amber-300",
     // <i> icon:moon
@@ -501,7 +555,7 @@
     // <div>
     f27: "w-9 h-[50px] shrink-0 overflow-hidden rounded-md border-2 border-cyan-500/80 bg-slate-900 flex flex-col items-center justify-center shadow",
     // <span>
-    f28: "font-mono font-black text-amber-300 text-[11px] leading-none",
+    f28: "gothic-num font-black text-amber-300 text-[11px] leading-none",
     // <i> icon:circle
     f29: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-cyan-400 text-[11px] my-0.5`,
     // <span>
@@ -517,23 +571,23 @@
     // <FxChip>  [size]
     f34: "w-4 h-4 text-[9px]",
     // <span>
-    f35: "font-mono font-black text-amber-300 text-[8px] leading-none",
+    f35: "gothic-num font-black text-amber-300 text-[8px] leading-none",
     // <span>
     f36: "text-[7px] font-black text-slate-100 leading-none whitespace-nowrap",
 
     // ── 手牌區：絕對水平居中 ──
     // <div>
-    f37: "absolute inset-0 flex items-center justify-center px-4 pointer-events-none",
+    f37: "absolute inset-0 z-10 flex items-center justify-center pointer-events-none",
     // <div>
     f38: "flex space-x-3 items-center justify-center h-full pointer-events-auto",
     // <div>
-    f39: ({ card, dragGhost, drawAnim, isSelected }) => `hand-card card-bg relative w-[130px] h-[190px] bg-slate-900 p-2 flex flex-col justify-between shrink-0 cursor-grab active:cursor-grabbing touch-none select-none ${dragGhost && dragGhost.card.id === card.id ? 'opacity-30' : ''} ${drawAnim && drawAnim.card && drawAnim.card.id === card.id ? 'opacity-0' : ''} ${
+    f39: ({ card, dragGhost, drawAnim, isSelected }) => `hand-card card-bg relative w-[130px] h-[173px] bg-slate-900 p-2 flex flex-col justify-between shrink-0 cursor-grab active:cursor-grabbing touch-none select-none ${dragGhost && dragGhost.card.id === card.id ? 'opacity-30' : ''} ${drawAnim && drawAnim.card && drawAnim.card.id === card.id ? 'opacity-0' : ''} ${
                                   isSelected ? 'selected' : ''
                                 }`,
     // <div>
     f40: "cd-num",
     // <span>
-    f41: ({ isSelected }) => `text-white text-base font-black leading-none font-mono [text-shadow:0_1px_3px_rgba(0,0,0,.9)]`,
+    f41: ({ isSelected }) => `text-white text-base font-black leading-none gothic-num [text-shadow:0_1px_3px_rgba(0,0,0,.9)]`,
     // <div>
     f42: "cd-icon",
     // <i>
@@ -551,7 +605,7 @@
     // <div>
     f48: "absolute inset-0 z-[35] flex items-center justify-center pointer-events-none",
     // <div>
-    f49: "relative w-[130px] h-[190px]",
+    f49: "relative w-[130px] h-[173px]",
     // <div>
     f50: "absolute inset-0",
     // <div>
@@ -565,7 +619,7 @@
     // <div>
     f55: "cd-num",
     // <span>
-    f56: "text-white text-base font-black leading-none font-mono [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
+    f56: "text-white text-base font-black leading-none gothic-num [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <div>
     f57: "cd-icon",
     // <i>
@@ -579,31 +633,25 @@
 
     // ── 右側浮動操作按鈕 ──
     // <div>
-    f62: ({ myHand }) => `absolute right-2 top-1/2 -translate-y-1/2 w-[16%] max-w-[70px] h-[90%] flex flex-col justify-center space-y-2 z-20 p-1 ${myHand.length === 1 ? '' : 'hidden'}`,
+    // 右側欄：頭像／名稱 + 抽一打一 + 拿一還一（直角、無邊框；可動時橙色光暈）
+    f62: "absolute right-1.5 top-1/2 -translate-y-1/2 w-[52px] flex flex-col gap-4 z-20",
     // <button> 「抽備用牌' : '抽一打一'」
-    f63: "w-full group relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-emerald-950/40 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 rounded-xl py-2 px-1 transition-all duration-300 active:scale-95 shadow-md flex flex-col items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed",
-    // <div>
-    f64: "w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center mb-0.5 border border-emerald-400/40",
-    // <i> icon:plus
-    f65: "fa-solid fa-plus text-[10px] text-emerald-400",
-    // <span>
-    f66: "text-[9.5px] font-black text-emerald-200",
+    f63: "w-[52px] h-[52px] shrink-0 group relative overflow-hidden border-0 rounded-none p-0 transition-all duration-300 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed bg-transparent",
+    f63img: "w-full h-full object-cover block pointer-events-none",
     // <button> 「拿一還一」
-    f67: "w-full group relative overflow-hidden bg-gradient-to-b from-slate-900 via-slate-900 to-blue-950/40 border border-blue-500/40 hover:border-blue-400 text-blue-300 rounded-xl py-2 px-1 transition-all duration-300 active:scale-95 shadow-md flex flex-col items-center justify-center disabled:opacity-30 disabled:cursor-not-allowed",
-    // <div>
-    f68: "w-5 h-5 rounded-full bg-blue-500/20 flex items-center justify-center mb-0.5 border border-blue-400/40",
-    // <i> icon:hand-pointer
-    f69: "fa-solid fa-hand-pointer text-[10px] text-blue-400",
-    // <span> 「拿一還一」
-    f70: "text-[9.5px] font-black text-blue-200",
+    f67: "w-[52px] h-[52px] shrink-0 group relative overflow-hidden border-0 rounded-none p-0 transition-all duration-300 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed bg-transparent",
+    f67img: "w-full h-full object-cover block pointer-events-none",
+    // 可行動時橙色光暈
+    fBtnGlow: "shadow-[0_0_12px_3px_rgba(251,146,60,0.85),0_0_24px_6px_rgba(234,88,12,0.45)]",
   },
   };
 
-  // ═══════════════ 玩家頭像（DiceBear 風格；要換風格只改 AVATAR_STYLE）═══════════════
-  // 可選：critters／fun-emoji／big-ears／croodles／bottts（原本）…；依各玩家 seed 固定出圖
-  const AVATAR_VER = '10.x';
-  const AVATAR_STYLE = 'critters';
-  window.AVATAR_URL = (seed) => 'https://api.dicebear.com/' + AVATAR_VER + '/' + AVATAR_STYLE + '/svg?seed=' + encodeURIComponent(seed);
+  // ═══════════════ 玩家頭像（本地 icon1.jpg～icon6.jpg；id0→icon1 … id5→icon6）═══════════════
+  // 圖檔放在 index.html 同一資料夾；建議 1:1（正方形）256×256 或 512×512
+  window.AVATAR_URL = (id) => {
+    const n = ((Number(id) % 6) + 6) % 6 + 1; // 0→1 … 5→6
+    return 'icon' + n + '.jpg';
+  };
 
   window.UI = UI;
 })();
