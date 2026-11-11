@@ -1482,8 +1482,11 @@
           const stageHostRef = useRef(null);
           const stageRef = useRef(null);
           const [stageScale, setStageScale] = useState(1);
+          // 用 callback ref 記住外層容器：容器何時掛載／換掉都會重新量尺寸（原本依賴 gameReady 但它宣告在後面，永遠是 undefined，舞台晚出現時不會重算）
+          const [stageHostEl, setStageHostEl] = useState(null);
+          const setStageHost = React.useCallback((el) => { stageHostRef.current = el; setStageHostEl(el); }, []);
           React.useLayoutEffect(() => {
-            const el = stageHostRef.current;
+            const el = stageHostEl;
             if (!el) return;
             const calc = () => {
               const cs = window.getComputedStyle(el);
@@ -1501,7 +1504,7 @@
               window.removeEventListener('resize', calc);
               window.removeEventListener('orientationchange', calc);
             };
-          }, [screen, gameReady, onlineSession]);
+          }, [stageHostEl]);
           // 螢幕座標 ➔ 舞台內座標（拖曳中的手牌殘影在舞台內以 fixed 定位，需換算縮放與偏移）
           const toStageXY = (cx, cy) => {
             const el = stageRef.current;
@@ -4598,7 +4601,7 @@
               active.isAI
                 ? !roomData || roomData.hostUid !== (firebaseUser && firebaseUser.uid)
                 : active.uid !== (firebaseUser && firebaseUser.uid)
-            )) return;
+            )) { console.warn('[換人] advanceTurn 被擋：目前不是本機的回合權', { turnIdx: st0.currentTurnIndex, activeUid: active.uid, myUid: firebaseUser && firebaseUser.uid, isAI: active.isAI }); return; }
 
             lockRef.current = true;
             setActionLocked(true);
@@ -4635,7 +4638,7 @@
               isAi
                 ? !roomData || roomData.hostUid !== (firebaseUser && firebaseUser.uid)
                 : active.uid !== (firebaseUser && firebaseUser.uid)
-            )) return;
+            )) { console.warn('[換人] advanceAfterPassive 被擋：目前不是本機的回合權', { turnIdx: st0.currentTurnIndex, activeUid: active.uid, myUid: firebaseUser && firebaseUser.uid, isAI: isAi }); return; }
 
             lockRef.current = true;
             setActionLocked(true);
@@ -5070,7 +5073,7 @@
           }
 
           return (
-            <div ref={stageHostRef} className={UI.root.r01}>
+            <div ref={setStageHost} className={UI.root.r01}>
               
               <div id="wm-stage" ref={stageRef} className={UI.root.r02} style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${stageScale})`, transformOrigin: 'center center' }}>
                 <WolfBgVideo />
