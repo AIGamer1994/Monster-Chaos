@@ -179,7 +179,7 @@
         const STAGE_W = 405, STAGE_H = 720;
         // 牌桌／頭像靜態圖：在首頁與大廳預先下載，避免對局中才載入卡很久
         const PRELOAD_ASSETS = [
-          'bg.jpg', 'card.jpg', 'cardb.jpg', 'cards.jpg',
+          'card.jpg', 'cardb.jpg', 'cards.jpg',
           'icon1.jpg', 'icon2.jpg', 'icon3.jpg', 'icon4.jpg', 'icon5.jpg', 'icon6.jpg',
           '抽.png', '拿.png',
         ];
@@ -198,6 +198,32 @@
             // 加 cache-bust 無用；用一般路徑讓瀏覽器快取
             img.src = src;
           })));
+        }
+
+        // 牌桌背景影片（bg.mp4，循環、靜音、行內播放）；放在牌桌最底層，CSS 見 theme.js 的 .table-bg-video
+        function WolfBgVideo() {
+          const ref = useRef(null);
+          useEffect(() => {
+            const v = ref.current;
+            if (!v) return;
+            v.muted = true; // React 的 muted 屬性不穩定，手動設定才能保證自動播放
+            v.defaultMuted = true;
+            const tryPlay = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+            tryPlay();
+            // 省電模式／自動播放被擋時，第一次觸控後再播
+            const onFirst = () => { tryPlay(); };
+            window.addEventListener('pointerdown', onFirst, { once: true });
+            const onVis = () => { if (!document.hidden) tryPlay(); };
+            document.addEventListener('visibilitychange', onVis);
+            return () => {
+              window.removeEventListener('pointerdown', onFirst);
+              document.removeEventListener('visibilitychange', onVis);
+            };
+          }, []);
+          return (
+            <video ref={ref} className="table-bg-video" src="bg.mp4"
+              autoPlay muted loop playsInline preload="auto" aria-hidden="true" tabIndex={-1} />
+          );
         }
 
         const LocalPlayerContext = React.createContext(0);
@@ -5047,6 +5073,7 @@
             <div ref={stageHostRef} className={UI.root.r01}>
               
               <div id="wm-stage" ref={stageRef} className={UI.root.r02} style={{ width: STAGE_W, height: STAGE_H, transform: `scale(${stageScale})`, transformOrigin: 'center center' }}>
+                <WolfBgVideo />
 
                 {/* A區: 版本設定區 */}
                 <header className={UI.A.a01}>

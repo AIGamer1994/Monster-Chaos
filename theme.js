@@ -30,15 +30,31 @@
 
   // ---- A–F 專用自訂 CSS（原本在 index.html <style> 內）-----------------
   const UI_CSS = `
-  /* ── 整張牌桌背景圖（檔案放在 index.html 同一資料夾：bg.jpg）──
-     一張圖覆蓋 A–F 全部區域；上面蓋一層半透明深色遮罩讓文字清楚。
-     調整遮罩濃度改 --ov（0 = 無遮罩，1 = 全黑）。圖片不存在時自動退回原本的漸層底色。 */
+  /* ── 整張牌桌背景影片（檔案放在 index.html 同一資料夾：bg.mp4，循環、靜音播放）──
+     影片由 index.html 內的 <WolfBgVideo /> 放在牌桌最底層；上面蓋一層半透明深色遮罩讓文字清楚。
+     調整遮罩濃度改 --ov（0 = 無遮罩，1 = 全黑）。影片未載入時自動退回原本的漸層底色。 */
   .table-bg {
     --ov: .0;
-    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('bg.jpg'), linear-gradient(to bottom, #0f172a, #020617, #0f172a);
-    background-size: cover, cover, 100% 100%;
-    background-position: center, center, center;
+    background-image: linear-gradient(to bottom, #0f172a, #020617, #0f172a);
+    background-size: 100% 100%;
     background-repeat: no-repeat;
+  }
+  .table-bg-video {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: -1;
+    pointer-events: none;
+  }
+  .table-bg::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: rgba(2,6,23,var(--ov));
+    z-index: -1;
+    pointer-events: none;
   }
 
   /* ── A–F 區古風字體（只設在區塊根節點讓子層繼承，Font Awesome 圖示不受影響）── */
