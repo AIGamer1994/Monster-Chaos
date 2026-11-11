@@ -1234,7 +1234,7 @@
           // 非全屏動畫：點擊區向下延伸覆蓋 D 區（手牌），方便大拇指點「繼續」；動畫本體仍偏上對齊 C 區
           const fxEl = full ? (
             <div
-              className={`gufeng ${replay ? 'fx-hold' : ''} fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-sm pointer-events-auto flex justify-center items-center ${canDismiss || replay ? 'cursor-pointer' : ''}`}
+              className={`gufeng ${replay ? 'fx-hold' : ''} fixed inset-0 z-[9999] bg-slate-950/85 backdrop-blur-sm pointer-events-auto flex justify-center items-center ${canDismiss || replay ? 'cursor-pointer' : ''}`}
               style={replay ? undefined : (fx.sticky ? { animation: 'fxIn .25s linear both' } : { animation: `fxIn .25s linear both, fxOut .3s linear ${Math.max(0, fx.duration + (fx.hold !== undefined ? fx.hold : fxHold(fx)) - 300) / 1000}s forwards` })}
               onClick={handleClick}
             >
@@ -1294,9 +1294,14 @@
               </div>
             </div>
           );
-          const contextualFx = <LocalPlayerContext.Provider value={localPlayerId}>{fxEl}</LocalPlayerContext.Provider>;
-          // 全屏與一般動畫皆 portal 到 body，點擊區才能蓋到 D 區手牌
-          return ReactDOM.createPortal(contextualFx, document.getElementById('wm-stage') || document.body);
+                    const contextualFx = <LocalPlayerContext.Provider value={localPlayerId}>{fxEl}</LocalPlayerContext.Provider>;
+          // 全屏效果一律掛到 body，避免被 #wm-stage 的 transform 建立 stacking context 限制；
+          // 非全屏效果維持掛在 #wm-stage 內（跟著舞台縮放與點擊區）。
+          const portalTarget = full
+            ? (typeof document !== 'undefined' ? document.body : null)
+            : (document.getElementById('wm-stage') || document.body);
+          if (!portalTarget) return null;
+          return ReactDOM.createPortal(contextualFx, portalTarget);
         }
         // ==== FX END ====
 
