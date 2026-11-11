@@ -323,11 +323,11 @@
     // <i> icon:hat-wizard
     d13: "fa-solid fa-hat-wizard",
     // <div>
-    d14: ({ player }) => `w-6 h-6 shrink-0 rounded-full bg-gradient-to-tr ${player.gradient} p-0.5 shadow`,
+    d14: ({ player }) => `w-9 h-9 shrink-0 rounded-full bg-gradient-to-tr ${player.gradient} p-0.5 shadow`,
     // <img>
     d15: "w-full h-full rounded-full bg-slate-900 object-cover",
     // <span>
-    d16: ({ isTurn }) => `text-[9px] truncate w-full text-center leading-none mt-0.5 mb-0.5 ${isTurn ? 'font-black text-emerald-300' : 'font-bold text-slate-200'}`,
+    d16: ({ isTurn }) => `text-[12px] truncate w-full text-center leading-tight mt-0.5 mb-0.5 ${isTurn ? 'font-black text-emerald-300' : 'font-bold text-slate-200'}`,
   },
 
   // ═══════════════ E 區｜面前區（對手面前牌／出牌動畫區／自己面前牌） ═══════════════
@@ -349,15 +349,15 @@
     // <div>
     e06: "min-w-0 basis-0 flex-1 flex flex-col items-center",
     // <div>
-    e07: "relative w-full max-w-[66px] mx-auto",
+    e07: "relative w-full max-w-[72px] mx-auto",
     // <button>
-    e08: ({ borderCls }) => `absolute left-1/2 -translate-x-1/2 front-card-bg bg-slate-900 shadow flex flex-col items-center justify-center px-0.5 py-0.5 active:scale-95 ${borderCls}`,
+    e08: ({ borderCls }) => `absolute left-1/2 -translate-x-1/2 front-card-bg bg-slate-900 shadow flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 active:scale-95 ${borderCls}`,
     // <span>
-    e09: "gothic-num font-black text-amber-300 text-[10px] leading-none tabular-nums",
+    e09: "gothic-num font-black text-amber-300 text-[14px] leading-none tabular-nums mb-1",
     // <i> icon:circle
-    e10: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[11px] my-0.5`,
+    e10: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[14px] my-1.5`,
     // <span>
-    e11: "text-[9px] font-black text-amber-100 leading-none text-center truncate w-full px-0.5",
+    e11: "text-[12px] font-black text-amber-100 leading-tight text-center truncate w-full px-0.5 mt-1",
     // <button>
     e12: ({ borderCls }) => `absolute left-1/2 -translate-x-1/2 w-full front-card-top bg-slate-900 shadow flex items-start active:scale-95 ${borderCls}`,
     // <span>
@@ -415,23 +415,23 @@
     // <span> 「備用」
     e38: "text-slate-400",
     // <button> 「月」
-    e39: "relative w-[66px] h-[88px] front-card-bg bg-slate-900 shadow overflow-hidden active:scale-95 animate-card-play select-none",
+    e39: "relative w-[72px] h-[96px] front-card-bg bg-slate-900 shadow overflow-hidden active:scale-95 animate-card-play select-none",
     // <div>
     e40: "h-full px-0.5 py-0.5 flex flex-col items-center justify-center gap-0.5",
     // <div>
     e41: "flex items-start justify-between gap-0.5",
     // <span>
-    e42: "gothic-num font-black text-amber-300 text-[10px] leading-none",
+    e42: "gothic-num font-black text-amber-300 text-[14px] leading-none mb-1",
     // <span> 「月」
     e43: "text-[8px] text-amber-300 font-bold",
     // <div>
     e44: "flex-1 flex items-center justify-center",
     // <i> icon:circle
-    e45: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[11px]`,
+    e45: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[14px] my-1.5`,
     // <div>
     e46: "text-center",
     // <div>
-    e47: "text-[9px] font-black text-amber-100 leading-none text-center truncate w-full",
+    e47: "text-[12px] font-black text-amber-100 leading-tight text-center truncate w-full mt-1",
     // <div>
     e48: "text-[8px] text-slate-400 truncate",
     // <div>
@@ -447,13 +447,13 @@
     // <div>
     e53: "relative",
     // <button>
-    e54: ({ active }) => `absolute top-0 front-card-bg bg-slate-900 shadow flex flex-col items-center justify-center px-0.5 py-0.5 active:scale-95 ${active ? 'front-card-active' : ''}`,
+    e54: ({ active }) => `absolute top-0 front-card-bg bg-slate-900 shadow flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 active:scale-95 ${active ? 'front-card-active' : ''}`,
     // <span>
-    e55: "gothic-num font-black text-amber-300 text-[10px] leading-none",
+    e55: "gothic-num font-black text-amber-300 text-[14px] leading-none mb-1",
     // <i> icon:circle
-    e56: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[11px] my-0.5`,
+    e56: ({ c }) => `fa-solid ${c.icon || 'fa-circle'} text-amber-400 text-[14px] my-1.5`,
     // <span>
-    e57: "text-[9px] font-black text-amber-100 leading-none text-center truncate w-full",
+    e57: "text-[12px] font-black text-amber-100 leading-tight text-center truncate w-full mt-1",
 
     // ── 點面前的牌：完整檢視（數值／圖示／名稱／說明） ──
     // <div>
@@ -503,19 +503,19 @@
 
     // ── F區左上：自己的頭像與狀態 ──
     // <div>
-    f05: ({ isDead, isTurn }) => `w-[48px] h-[48px] shrink-0 flex flex-col items-center justify-center gap-0.5 rounded-none px-0.5 py-0.5 bg-slate-800/90 border transition-all overflow-hidden ${
+    f05: ({ isDead, isTurn }) => `relative w-[52px] h-[56px] shrink-0 flex flex-col items-center justify-center gap-0.5 rounded-none px-0.5 py-0.5 bg-slate-800/90 border transition-all overflow-hidden ${
                             isTurn ? 'border-2 border-emerald-400 shadow-[0_0_10px_rgba(52,211,153,.65)]' : 'border border-slate-600/70'
                           } ${isDead ? 'grayscale opacity-40' : ''}`,
     // <div>
-    f06: ({ me }) => `w-6 h-6 shrink-0 rounded-full bg-gradient-to-tr ${me.gradient} p-0.5 shadow`,
+    f06: ({ me }) => `w-8 h-8 shrink-0 rounded-full bg-gradient-to-tr ${me.gradient} p-0.5 shadow`,
     // <img>
     f07: "w-full h-full rounded-full bg-slate-900 object-cover",
     // <div>
     f08: "min-w-0 flex flex-col gap-0.5",
     // <span>
-    f09: ({ isTurn }) => `text-[7px] font-black leading-none text-center truncate w-full ${isTurn ? 'text-emerald-300' : 'text-sky-300'}`,
+    f09: ({ isTurn }) => `text-[12px] font-black leading-tight text-center truncate w-full ${isTurn ? 'text-emerald-300' : 'text-sky-300'}`,
     // <div>
-    f10: "flex flex-nowrap items-center gap-[3px] overflow-hidden whitespace-nowrap text-[8px] leading-none font-bold",
+    f10: "absolute top-0 left-0 z-10 flex flex-wrap items-center gap-px max-w-full overflow-hidden text-[8px] leading-none font-bold pointer-events-none",
     // <span>
     f11: "flex items-center gap-px text-amber-300",
     // <i> icon:moon
@@ -634,12 +634,12 @@
     // ── 右側浮動操作按鈕 ──
     // <div>
     // 右側欄：頭像／名稱 + 抽一打一 + 拿一還一（直角、無邊框；可動時橙色光暈）
-    f62: "absolute right-1.5 top-1/2 -translate-y-1/2 w-[48px] flex flex-col gap-1 z-20",
+    f62: "absolute right-1.5 top-1/2 -translate-y-1/2 w-[52px] flex flex-col gap-4 z-20",
     // <button> 「抽備用牌' : '抽一打一'」
-    f63: "w-[48px] h-[48px] shrink-0 group relative overflow-hidden border-0 rounded-none p-0 transition-all duration-300 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed bg-transparent",
+    f63: "w-[52px] h-[52px] shrink-0 group relative overflow-hidden border-0 rounded-none p-0 transition-all duration-300 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed bg-transparent",
     f63img: "w-full h-full object-cover block pointer-events-none",
     // <button> 「拿一還一」
-    f67: "w-[48px] h-[48px] shrink-0 group relative overflow-hidden border-0 rounded-none p-0 transition-all duration-300 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed bg-transparent",
+    f67: "w-[52px] h-[52px] shrink-0 group relative overflow-hidden border-0 rounded-none p-0 transition-all duration-300 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed bg-transparent",
     f67img: "w-full h-full object-cover block pointer-events-none",
     // 可行動時橙色光暈
     fBtnGlow: "shadow-[0_0_12px_3px_rgba(251,146,60,0.85),0_0_24px_6px_rgba(234,88,12,0.45)]",

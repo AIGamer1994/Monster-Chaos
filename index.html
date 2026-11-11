@@ -741,9 +741,6 @@
               <div className="flex flex-col items-center gap-1.5">
                 <div className="relative w-[200px] h-[160px]">
                   <div className="absolute left-[36px] top-0" style={an('fxInL', 0.4, 0)}><FxChip p={src} size="w-14 h-14 text-2xl" /></div>
-                  <div className="absolute left-[44px] top-[96px] w-[40px] h-[60px] rounded-md border-2 border-dashed border-slate-500/70 flex items-end justify-center" style={an('fxFadeUp', 0.4, 0.3)}>
-                    <span className="text-[8px] text-slate-500 mb-0.5">面前</span>
-                  </div>
                   <div className="absolute left-[36px] top-[75px] z-10" style={{ transform: 'scale(.65)' }}>
                     <div style={an('fxPop', 0.4, 0.2)}>
                       <div style={an('fxDiscard', 0.7, 1.1, 'ease-in')}><FxFace c={card} cls="w-14" /></div>
@@ -768,9 +765,6 @@
                 <div className="relative w-[220px] h-[166px]">
                   <div className="absolute left-[40px] top-0" style={an('fxInL', 0.4, 0)}>
                     <FxChip p={src} size="w-14 h-14 text-2xl" glow="ring-4 ring-emerald-400/70" />
-                  </div>
-                  <div className="absolute left-[48px] top-[100px] w-[40px] h-[60px] rounded-md border-2 border-dashed border-slate-500/70 flex items-end justify-center" style={an('fxFadeUp', 0.4, 0.25)}>
-                    <span className="text-[8px] text-slate-500 mb-0.5">面前</span>
                   </div>
                   <div className="absolute left-[40px] top-[78px] z-10" style={{ transform: 'scale(.65)' }}>
                     <div style={an('fxPop', 0.35, 0.2)}>
@@ -1863,28 +1857,33 @@
           const frontSeenIdsRef = useRef({}); // playerId -> [cardId]
           const frontCardsSnapRef = useRef({}); // playerId -> card[]
           const frontAnimReadyRef = useRef(false);
-          const playFrontAnim = (card, playerId, opts = {}) => {
+          const frontAnimQueueRef = useRef([]); // 排隊，避免後一張蓋掉前一張
+          const frontAnimBusyRef = useRef(false);
+          const playFrontAnim = (card, playerId, opts = {}, onDone) => {
             if (!card) return;
             const run = () => {
               const stage = stageRef.current;
-              if (!stage) return;
+              if (!stage) {
+                if (typeof onDone === 'function') onDone();
+                return;
+              }
               const slot = frontTargetRefs.current[playerId];
               const col = frontColRefs.current[playerId];
               const k = slow();
               // 直接用落點 DOM 的視口像素（已含 stage scale），避免飛入牌比面前格小一截
               let left = window.innerWidth / 2;
               let top = window.innerHeight * 0.4;
-              let w = 66;
-              let h = 88;
+              let w = 72;
+              let h = 96;
               const step = 14;
-              const fullH = 88;
+              const fullH = 96;
               // 暫留上一張完整牌時，新牌最終會落在更下方（step * prevN）
               const prevN = opts.prevN || 0;
               const stackShift = prevN > 0 ? step * prevN : 0;
               if (col) {
                 const cr = col.getBoundingClientRect();
                 const sc = stageScale || 1;
-                w = Math.max(1, 66 * sc);
+                w = Math.max(1, 72 * sc);
                 h = Math.max(1, fullH * sc);
                 left = cr.left + cr.width / 2;
                 top = cr.top + stackShift * sc + h / 2;
@@ -1900,17 +1899,42 @@
                 left = ar.left + ar.width / 2;
                 top = ar.top + ar.height * (isMe ? 0.82 : 0.22);
                 const sc = stageScale || 1;
-                w = 66 * sc;
-                h = 88 * sc;
+                w = 72 * sc;
+                h = 96 * sc;
               }
               if (frontAnimTimerRef.current) clearTimeout(frontAnimTimerRef.current);
               setFrontAnim({ key: `${Date.now()}-${Math.random()}`, card, playerId, left, top, w, h, k });
               frontAnimTimerRef.current = setTimeout(() => {
                 frontAnimTimerRef.current = null;
                 setFrontAnim(null);
+                if (playerId != null) {
+                  setFrontHold(h => {
+                    if (!h[playerId]) return h;
+                    const n = { ...h };
+                    delete n[playerId];
+                    return n;
+                  });
+                }
+                if (typeof onDone === 'function') onDone();
               }, Math.round(520 * k) + 40);
             };
             requestAnimationFrame(() => requestAnimationFrame(run));
+          };
+          const enqueueFrontAnim = (card, playerId, opts = {}) => {
+            if (!card) return;
+            frontAnimQueueRef.current.push({ card, playerId, opts });
+            const drain = () => {
+              if (frontAnimBusyRef.current) return;
+              const next = frontAnimQueueRef.current.shift();
+              if (!next) return;
+              frontAnimBusyRef.current = true;
+              // B：不等待 fx，立刻在效果／全屏層後面同步飛入
+              playFrontAnim(next.card, next.playerId, next.opts, () => {
+                frontAnimBusyRef.current = false;
+                drain();
+              });
+            };
+            drain();
           };
           useEffect(() => {
             if (screen === 'game') {
@@ -1925,34 +1949,37 @@
           }, [screen]);
           useEffect(() => {
             if (screen !== 'game') return;
+            const cardKey = (c, i) => {
+              if (!c) return `k${i}`;
+              if (c.id != null && c.id !== '') return String(c.id);
+              return `${c.title}|${c.value}|${c.icon || ''}`;
+            };
             players.forEach(p => {
-              const list = playedCardsOf(p).filter(c => c && c.id);
-              const ids = list.map(c => c.id);
-              const prevIds = frontSeenIdsRef.current[p.id] || [];
+              const list = playedCardsOf(p).filter(Boolean);
+              const keys = list.map((c, i) => cardKey(c, i));
+              const prevKeys = frontSeenIdsRef.current[p.id] || [];
               const prevCards = frontCardsSnapRef.current[p.id] || [];
-              const prevSet = new Set(prevIds);
-              const added = list.filter(c => !prevSet.has(c.id));
-              frontSeenIdsRef.current[p.id] = ids;
+              const prevSet = new Set(prevKeys);
+              let added = list.map((c, i) => ({ c, k: cardKey(c, i) })).filter(x => !prevSet.has(x.k));
+              // 備援：僅長度增加且 key 意外撞車時，取尾端新增張數
+              if (added.length === 0 && list.length > prevCards.length) {
+                added = list.slice(prevCards.length).map(c => ({ c, k: cardKey(c, 0) }));
+              }
+              frontSeenIdsRef.current[p.id] = keys;
               frontCardsSnapRef.current[p.id] = list;
               if (!frontAnimReadyRef.current) return;
-              if (prevIds.length === 0 && ids.length > 1) return; // 整包同步略過
+              // 進房整包同步：先前空且一次 ≥2 張 → 略過；其餘都播
+              if (prevKeys.length === 0 && keys.length >= 2) return;
               const isMe = p.id === humanIdRef.current;
-              added.forEach((c, i) => {
-                const delay = i * 70;
-                // 其他玩家：飛入播完前暫留上一版（上一張仍完整、不立刻摺上）
+              added.forEach((item, ai) => {
+                const { c } = item;
+                if (!c) return;
                 if (!isMe && prevCards.length > 0) {
                   setFrontHold(h => ({ ...h, [p.id]: prevCards }));
-                  const holdMs = Math.round(520 * slow()) + 80 + delay;
-                  setTimeout(() => {
-                    setFrontHold(h => {
-                      if (!h[p.id]) return h;
-                      const n = { ...h };
-                      delete n[p.id];
-                      return n;
-                    });
-                  }, holdMs);
                 }
-                setTimeout(() => playFrontAnim(c, p.id, { prevN: isMe ? 0 : prevCards.length }), delay);
+                setTimeout(() => {
+                  enqueueFrontAnim(c, p.id, { prevN: isMe ? 0 : prevCards.length });
+                }, ai * 100);
               });
             });
           }, [players, screen]);
@@ -5148,8 +5175,8 @@
                         const fronts = frontHold[player.id] || getFrontCards(player);
                         const step = 14;
                         const foldedH = 22;
-                        const fullW = 66;
-                        const fullH = 88;
+                        const fullW = 72;
+                        const fullH = 96;
                         const n = fronts.length;
                         const stackH = n === 0 ? 0 : (n === 1 ? fullH : step * (n - 1) + fullH);
                         return (
@@ -5277,8 +5304,8 @@
                     const fronts = me ? getFrontCards(me) : [];
                     if (!fronts.length) return <div className={UI.E.e51} />;
                     // 與中間出牌卡、對手最新面前牌同一組固定像素：66×88（3:4）；闊度對齊對手摺疊牌（欄寬）
-                    const cardW = 66;
-                    const cardH = 88;
+                    const cardW = 72;
+                    const cardH = 96;
                     const overlap = 18;
                     const totalW = cardW + Math.max(0, fronts.length - 1) * (cardW - overlap);
                     return (
@@ -5486,10 +5513,6 @@
                       const winN = Math.min(wins[me.id] || 0, 3);
                       return (
                         <div className={UI.F.f05({ isDead, isTurn })}>
-                          <div className={UI.F.f06({ me })}>
-                            <img src={AVATAR_URL(me.id)} alt={me.name} className={UI.F.f07} />
-                          </div>
-                          <span className={UI.F.f09({ isTurn })}>{me.name}</span>
                           <div className={UI.F.f10}>
                             {winN > 0 && <span className={UI.F.f11}>{Array.from({ length: winN }).map((_, i) => <i key={i} className={UI.F.f12}></i>)}</span>}
                             {activeN > 0 && <span className={UI.F.f13}><i className={UI.F.f14}></i><span>{activeN}</span></span>}
@@ -5497,6 +5520,10 @@
                             {witchTargetOwner && witchTargetOwner.targetId === me.id && <span className={UI.F.f17}><i className={UI.F.f18}></i></span>}
                             {witchTargetOwner && witchTargetOwner.witchOwnerId === me.id && <span className={UI.F.f19}><i className={UI.F.f20}></i></span>}
                           </div>
+                          <div className={UI.F.f06({ me })}>
+                            <img src={AVATAR_URL(me.id)} alt={me.name} className={UI.F.f07} />
+                          </div>
+                          <span className={UI.F.f09({ isTurn })}>{me.name}</span>
                         </div>
                       );
                     })()}
@@ -5528,7 +5555,7 @@
               {frontAnim && frontAnim.card && (
                 <div
                   key={frontAnim.key}
-                  className="pointer-events-none fixed z-[55]"
+                  className="pointer-events-none fixed z-[20]"
                   style={{
                     left: frontAnim.left,
                     top: frontAnim.top,
@@ -5537,10 +5564,10 @@
                     animation: `fxFrontFly ${0.5 * (frontAnim.k || 1)}s ease-out both`,
                   }}
                 >
-                  <div className="w-full h-full overflow-hidden front-card-bg bg-slate-900 flex flex-col items-center justify-center shadow-lg gufeng">
-                    <span className="gothic-num font-black text-amber-300 text-base leading-none">{frontAnim.card.value}</span>
-                    <i className={`fa-solid ${frontAnim.card.icon || 'fa-circle'} text-amber-400/80 text-sm my-0.5`}></i>
-                    <span className="text-[9px] font-black text-amber-200 leading-none whitespace-nowrap">{frontAnim.card.title}</span>
+                  <div className="w-full h-full overflow-hidden front-card-bg bg-slate-900 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 shadow-lg gufeng">
+                    <span className="gothic-num font-black text-amber-300 text-[14px] leading-none mb-1">{frontAnim.card.value}</span>
+                    <i className={`fa-solid ${frontAnim.card.icon || 'fa-circle'} text-amber-400 text-[14px] my-1.5`}></i>
+                    <span className="text-[12px] font-black text-amber-100 leading-tight text-center truncate w-full mt-1">{frontAnim.card.title}</span>
                   </div>
                 </div>
               )}
@@ -5600,7 +5627,7 @@
               {/* 遊戲結束勝利彈窗 */}
               {gameOver && winnerInfo && victoryReady && !victoryDismissed && (
                 <div className="fixed inset-0 bg-slate-950/90 backdrop-blur-md z-[120] flex items-center justify-center p-4 animate-fade-in">
-                  <div className="bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-400/80 rounded-2xl w-full max-w-xs p-5 shadow-2xl text-center relative overflow-y-auto max-h-[648px]">
+                  <div className="gufeng bg-gradient-to-b from-slate-900 to-slate-950 border-2 border-amber-400/80 rounded-2xl w-full max-w-xs p-5 shadow-2xl text-center relative overflow-y-auto max-h-[648px]">
                     <i className="fa-solid fa-trophy text-5xl text-amber-400 mb-3 filter drop-shadow"></i>
                     <h2 className="text-xl font-black text-amber-300 mb-1">【{winnerInfo.winnerName}】</h2>
                     <p className="text-xs text-emerald-300 font-bold mb-3">{winnerInfo.reason}</p>
