@@ -30,7 +30,7 @@
 
   // ---- A–F 專用自訂 CSS（原本在 index.html <style> 內）-----------------
   const UI_CSS = `
-  /* ── 整張牌桌背景影片（檔案放在 index.html 同一資料夾：bg.mp4，循環、靜音播放）──
+  /* ── 整張牌桌背景影片（video/bg.mp4，循環、靜音播放）──
      影片由 index.html 內的 <WolfBgVideo /> 放在牌桌最底層；上面蓋一層半透明深色遮罩讓文字清楚。
      調整遮罩濃度改 --ov（0 = 無遮罩，1 = 全黑）。影片未載入時自動退回原本的漸層底色。 */
   .table-bg {
@@ -75,43 +75,43 @@
     font-variant-numeric: normal;
   }
 
-  /* ── 手牌背景圖（檔案放在 index.html 同一資料夾：card.jpg，建議 130x173（3:4））──
+  /* ── 手牌背景圖（photo/card.jpg，建議 130x173（3:4））──
      套用在：F 區手牌、抽牌動畫牌面、點開的放大檢視。--ov 為深色遮罩濃度（0 = 無遮罩，1 = 全黑）。
      圖片不存在時自動退回原本的深色底（bg-slate-900）。 */
   .card-bg {
     --ov: .2;
-    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('card.jpg');
+    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('photo/card.jpg');
     background-size: cover, cover;
     background-position: center, center;
     background-repeat: no-repeat;
   }
 
-  /* ── 卡背圖（card.jpg 的背面版：cardb.jpg，同一資料夾）。用在抽牌動畫牌背、C 區動畫的牌背。
+  /* ── 卡背圖（photo/cardb.jpg）。用在抽牌動畫牌背、C 區動畫的牌背。
      圖片不存在時退回深藍底色。 */
   .card-back {
     background-color: #1e1b4b;
-    background-image: url('cardb.jpg');
+    background-image: url('photo/cardb.jpg');
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     min-height: 0;
   }
 
-  /* ── 面前區／動畫正面小牌背景（cards.jpg；與手牌 card.jpg、牌背 cardb.jpg 分開）──
+  /* ── 面前區／動畫正面小牌背景（photo/cards.jpg；與手牌、牌背分開）──
      無圓角無外框由 class 控制；比例統一 3:4。 */
   .front-card-bg {
     --ov: .25;
-    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('cards.jpg');
+    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('photo/cards.jpg');
     background-size: cover, cover;
     background-position: center, center;
     background-repeat: no-repeat;
   }
 
-  /* ── 面前區「上方摺疊條」：只用 cards.jpg 最上方一段作背景 ──
+  /* ── 面前區「上方摺疊條」：只用 photo/cards.jpg 最上方一段作背景 ──
      寬度與完整面前牌相同；高度為摺疊條；圖由上往下裁。 */
   .front-card-top {
     --ov: .2;
-    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('cards.jpg');
+    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('photo/cards.jpg');
     background-size: 100% auto, 100% auto;
     background-position: center top, center top;
     background-repeat: no-repeat, no-repeat;
@@ -137,13 +137,13 @@
 
   /* ── 牌面各元素對齊 card.jpg 的格仔（百分比 = 佔整張 130x173 卡的比例；要微調就改這裡）──
      cd-num   數字 → 左上紅圈中心
-     cd-title 卡名 → 右上暗紅橫幅
+     cd-title 卡名 → 整張牌水平置中（名稱列）
      cd-icon  圖示 → 中間大黑窗中心
      cd-desc  說明 → 底部咖啡色底板 
      使用前提：外層卡片要 position: relative。 */
   .cd-num   { position:absolute; left:2.8%;  top:2.4%;  width:21.5%; height:14.7%; display:flex; align-items:center; justify-content:center; }
-  .cd-title { position:absolute; left:24.2%; top:5.7%;  width:64.8%; height:7.2%;  display:flex; align-items:center; justify-content:center; overflow:hidden; white-space:nowrap; }
-  .cd-icon  { position:absolute; left:12%;   top:13.9%; width:74.6%; height:46.4%; display:flex; align-items:center; justify-content:center; }
+  .cd-title { position:absolute; left:8%; top:5%; width:84%; height:10%; display:flex; align-items:center; justify-content:center; overflow:hidden; white-space:nowrap; text-align:center; }
+  .cd-icon  { position:absolute; left:12%;   top:16%; width:74.6%; height:44%; display:flex; align-items:center; justify-content:center; }
   .cd-desc  { position:absolute; left:12.5%; top:73.5%; width:74%;   height:19.5%; display:flex; align-items:center; justify-content:center; text-align:center; overflow:hidden; }
 
   /* 手牌選中動畫 */
@@ -376,8 +376,8 @@
     e11: "text-[12px] font-black text-amber-100 leading-tight text-center truncate w-full px-0.5 mt-1",
     // <button>
     e12: ({ borderCls }) => `absolute left-1/2 -translate-x-1/2 w-full front-card-top bg-slate-900 shadow flex items-start active:scale-95 ${borderCls}`,
-    // <span>
-    e13: "w-[20px] shrink-0 text-center gothic-num font-black text-amber-300 text-[10px] leading-none pt-0.5 tabular-nums",
+    // <span> 摺疊條數值（略靠右，避開左側裝飾更清楚）
+    e13: "w-[22px] shrink-0 text-center gothic-num font-black text-amber-300 text-[10px] leading-none pt-0.5 pl-1.5 tabular-nums",
     // <span>
     e14: "flex-1 min-w-0 text-center font-black text-amber-100 text-[9px] leading-none pt-0.5 truncate pr-0.5",
 
@@ -607,11 +607,12 @@
     // <div>
     f42: "cd-icon",
     // <i>
-    f43: ({ card }) => `fa-solid ${card.icon} text-4xl text-cyan-400 filter drop-shadow`,
+    // 手牌中間圖示：Tiffany blue
+    f43: ({ card }) => `fa-solid ${card.icon} text-4xl text-[#81D8D0] filter drop-shadow`,
     // <div>
     f44: "cd-desc",
     // <div>
-    f45: "cd-title text-[11px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
+    f45: "cd-title text-[12px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <div>
     f46: "w-full text-center text-[8px] leading-[1.2] text-slate-200 line-clamp-4 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <div> 「無手牌」
@@ -639,11 +640,12 @@
     // <div>
     f57: "cd-icon",
     // <i>
-    f58: ({ c }) => `fa-solid ${c.icon} text-4xl text-cyan-400 filter drop-shadow`,
+    // 抽牌動畫圖示：與手牌同色 Tiffany blue
+    f58: ({ c }) => `fa-solid ${c.icon} text-4xl text-[#81D8D0] filter drop-shadow`,
     // <div>
     f59: "cd-desc",
     // <div>
-    f60: "cd-title text-[11px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
+    f60: "cd-title text-[12px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
     // <div>
     f61: "w-full text-center text-[8px] leading-[1.2] text-slate-200 line-clamp-4 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]",
 
@@ -657,16 +659,16 @@
     // <button> 「拿一還一」
     f67: "w-[52px] h-[52px] shrink-0 group relative overflow-hidden border-0 rounded-none p-0 transition-all duration-300 active:scale-95 disabled:opacity-30 disabled:cursor-not-allowed bg-transparent",
     f67img: "w-full h-full object-cover block pointer-events-none",
-    // 可行動時橙色光暈
-    fBtnGlow: "shadow-[0_0_12px_3px_rgba(251,146,60,0.85),0_0_24px_6px_rgba(234,88,12,0.45)]",
+    // 可行動時橙色光暈（較小；實際以 btnBlinkO 為主）
+    fBtnGlow: "shadow-[0_0_4px_1px_rgba(251,146,60,0.55),0_0_8px_2px_rgba(234,88,12,0.28)]",
   },
   };
 
-  // ═══════════════ 玩家頭像（本地 icon1.jpg～icon6.jpg；id0→icon1 … id5→icon6）═══════════════
-  // 圖檔放在 index.html 同一資料夾；建議 1:1（正方形）256×256 或 512×512
+  // ═══════════════ 玩家頭像（photo/icon1.jpg～icon6.jpg；id0→icon1 … id5→icon6）═══════════════
+  // 圖檔放在 photo/；建議 1:1（正方形）256×256 或 512×512
   window.AVATAR_URL = (id) => {
     const n = ((Number(id) % 6) + 6) % 6 + 1; // 0→1 … 5→6
-    return 'icon' + n + '.jpg';
+    return 'photo/icon' + n + '.jpg';
   };
 
   window.UI = UI;

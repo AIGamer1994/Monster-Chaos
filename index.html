@@ -151,7 +151,7 @@
         @keyframes fxDim { 0% { opacity: 1; } 100% { opacity: .38; } }
         @keyframes btnBlinkG { 0%, 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); border-color: rgba(16,185,129,.35); } 50% { box-shadow: 0 0 14px 3px rgba(52,211,153,.9); border-color: #6ee7b7; } }
         @keyframes btnBlinkB { 0%, 100% { box-shadow: 0 0 0 0 rgba(96,165,250,0); border-color: rgba(59,130,246,.4); } 50% { box-shadow: 0 0 14px 3px rgba(96,165,250,.85); border-color: #93c5fd; } }
-        @keyframes btnBlinkO { 0%, 100% { box-shadow: 0 0 4px 1px rgba(251,146,60,.25); } 50% { box-shadow: 0 0 16px 4px rgba(251,146,60,.95), 0 0 28px 8px rgba(234,88,12,.5); } }
+        @keyframes btnBlinkO { 0%, 100% { box-shadow: 0 0 1px 0 rgba(251,146,60,.18); } 50% { box-shadow: 0 0 5px 1px rgba(251,146,60,.65), 0 0 9px 2px rgba(234,88,12,.3); } }
         @keyframes turnBlinkG { 0%, 100% { box-shadow: 0 0 4px 1px rgba(52,211,153,.3); border-color: rgba(52,211,153,.55); } 50% { box-shadow: 0 0 14px 3px rgba(52,211,153,.95), 0 0 24px 6px rgba(16,185,129,.45); border-color: #6ee7b7; } }
 
 
@@ -178,11 +178,64 @@
         // 牌桌固定 9:16 舞台（設計尺寸）：整個牌桌以此尺寸排版，再依視窗大小等比縮放（卡牌、文字一起縮放）
         const STAGE_W = 405, STAGE_H = 720;
         // 牌桌／頭像靜態圖：在首頁與大廳預先下載，避免對局中才載入卡很久
+        // 靜態圖：photo/ ；影片：video/
         const PRELOAD_ASSETS = [
-          'card.jpg', 'cardb.jpg', 'cards.jpg',
-          'icon1.jpg', 'icon2.jpg', 'icon3.jpg', 'icon4.jpg', 'icon5.jpg', 'icon6.jpg',
-          '抽.png', '拿.png',
+          'photo/card.jpg', 'photo/cardb.jpg', 'photo/cards.jpg',
+          'photo/icon1.jpg', 'photo/icon2.jpg', 'photo/icon3.jpg', 'photo/icon4.jpg', 'photo/icon5.jpg', 'photo/icon6.jpg',
+          'photo/抽.png', 'photo/拿.png',
         ];
+        // 終局／月亮全屏動畫影片（進入遊戲頁後才開始下載，不佔首頁頻寬）
+        // key 對應 fx-finale：crescent 彎月／half 半月／full 滿月／wolf 狼月
+        const FINALE_VIDEOS = {
+          crescent: 'video/彎.mp4',
+          half: 'video/半.mp4',
+          full: 'video/滿.mp4',
+          wolf: 'video/狼.mp4',
+        };
+        const finaleVideoReady = Object.create(null); // src -> true
+        function preloadVideoSrc(src) {
+          return new Promise((resolve) => {
+            if (!src || finaleVideoReady[src]) {
+              resolve({ src, ok: true, cached: true });
+              return;
+            }
+            let settled = false;
+            const v = document.createElement('video');
+            v.muted = true;
+            v.defaultMuted = true;
+            v.playsInline = true;
+            v.preload = 'auto';
+            v.setAttribute('playsinline', '');
+            v.setAttribute('webkit-playsinline', '');
+            v.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px;';
+            const finish = (ok) => {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              if (ok) finaleVideoReady[src] = true;
+              try { if (v.parentNode) v.parentNode.removeChild(v); } catch (e) {}
+              resolve({ src, ok: !!ok });
+            };
+            v.addEventListener('canplay', () => finish(true), { once: true });
+            v.addEventListener('loadeddata', () => { if (v.readyState >= 2) finish(true); }, { once: true });
+            v.addEventListener('error', () => finish(false), { once: true });
+            const timer = setTimeout(() => finish(v.readyState >= 2), 25000);
+            document.body.appendChild(v);
+            v.src = src;
+            try { v.load(); } catch (e) { finish(false); }
+          });
+        }
+        function preloadFinaleVideos() {
+          const list = Object.values(FINALE_VIDEOS).filter(Boolean);
+          return Promise.all(list.map(preloadVideoSrc));
+        }
+        // 供 fx-finale.js 查詢：某支終局影片是否已預載
+        window.FINALE_VIDEOS = FINALE_VIDEOS;
+        window.isFinaleVideoReady = (keyOrSrc) => {
+          const src = FINALE_VIDEOS[keyOrSrc] || keyOrSrc;
+          return !!(src && finaleVideoReady[src]);
+        };
+
         function preloadAllAssets(onProgress) {
           let done = 0;
           const total = PRELOAD_ASSETS.length;
@@ -221,7 +274,7 @@
             };
           }, []);
           return (
-            <video ref={ref} className="table-bg-video" src="bg.mp4"
+            <video ref={ref} className="table-bg-video" src="video/bg.mp4"
               autoPlay muted loop playsInline preload="auto" aria-hidden="true" tabIndex={-1} />
           );
         }
@@ -256,11 +309,11 @@
         // 玩家初始資料
         const INITIAL_PLAYERS = [
           { id: 0, name: '你', isAI: false, status: '存活', emoji: '⚔️', seed: 'P0', gradient: 'from-emerald-500 to-teal-300', protected: false, playedCards: [], witchRevived: false },
-          { id: 1, name: '女武神', isAI: true, status: '存活', emoji: '🛡️', seed: 'P1', gradient: 'from-pink-600 to-rose-400', protected: false, playedCards: [], witchRevived: false },
-          { id: 2, name: '暗影', isAI: true, status: '存活', emoji: '💤', seed: 'P2', gradient: 'from-purple-600 to-indigo-400', protected: false, playedCards: [], witchRevived: false },
-          { id: 3, name: '零號機', isAI: true, status: '存活', emoji: '⚡', seed: 'P3', gradient: 'from-blue-600 to-cyan-400', protected: false, playedCards: [], witchRevived: false },
-          { id: 4, name: '狂戰士', isAI: true, status: '存活', emoji: '👑', seed: 'P4', gradient: 'from-amber-600 to-yellow-400', protected: false, playedCards: [], witchRevived: false },
-          { id: 5, name: '毒蛛', isAI: true, status: '存活', emoji: '🧪', seed: 'P5', gradient: 'from-teal-600 to-emerald-400', protected: false, playedCards: [], witchRevived: false },
+          { id: 1, name: '幽靈', isAI: true, status: '存活', emoji: '👻', seed: 'P1', gradient: 'from-slate-400 to-slate-200', protected: false, playedCards: [], witchRevived: false },
+          { id: 2, name: '吸血鬼', isAI: true, status: '存活', emoji: '🧛', seed: 'P2', gradient: 'from-rose-700 to-red-400', protected: false, playedCards: [], witchRevived: false },
+          { id: 3, name: '南瓜王', isAI: true, status: '存活', emoji: '🎃', seed: 'P3', gradient: 'from-orange-600 to-amber-400', protected: false, playedCards: [], witchRevived: false },
+          { id: 4, name: '小丑', isAI: true, status: '存活', emoji: '🤡', seed: 'P4', gradient: 'from-fuchsia-600 to-pink-400', protected: false, playedCards: [], witchRevived: false },
+          { id: 5, name: '狼人', isAI: true, status: '存活', emoji: '🐺', seed: 'P5', gradient: 'from-stone-600 to-amber-700', protected: false, playedCards: [], witchRevived: false },
         ];
 
         // 29 張普通角色牌範本 + 1張特殊狼人牌
@@ -377,7 +430,8 @@
               wolf = wolfWinner ? 'held' : (outW ? 'out' : 'none');
               if (!wolfWinner) traitorWinner = null;
             }
-            const dur = ph >= 3 ? (wolf === 'held' ? 6800 : 4200) : 3200;
+            // 月亮／狼月皆播影片：略加長時長讓影片播完（可依實際片長再調）
+            const dur = ph >= 3 ? (wolf === 'held' ? 6500 : 5200) : 5200;
             return { key: `${Date.now()}-${Math.random()}`, kind: 'moon', card: { title: moonTitle[1], value: '🌙', icon: 'fa-moon' }, src: moonSource, tgt: null, tone: 'ok', phase: ph, wolf, wolfWinner, traitorWinner, baseDur: dur, duration: dur };
           }
           // 第 3 張月亮翻開後，有人用拿一還一／守夜人把狼人留在手上 ➔ 直接播咬鏡頭演出
@@ -388,7 +442,7 @@
             players.filter(p => p.status === '存活' && p.id !== wsrc.id).forEach(p => {
               if (((st.playerHands || {})[p.id] || []).some(c => c && c.title === '叛徒')) wtraitor = p;
             });
-            return { key: `${Date.now()}-${Math.random()}`, kind: 'wolfbite', card: { title: '狼人', value: 10, icon: 'fa-paw' }, src: wsrc, tgt: null, tone: 'ok', phase: 3, wolf: 'held', wolfWinner: wsrc, traitorWinner: wtraitor, baseDur: FX_DURATION.wolfbite, duration: FX_TOTAL_BY.wolfbite };
+            return { key: `${Date.now()}-${Math.random()}`, kind: 'wolfbite', card: { title: '狼人', value: 10, icon: 'fa-paw' }, src: wsrc, tgt: null, tone: 'ok', phase: 3, wolf: 'held', wolfWinner: wsrc, traitorWinner: wtraitor, baseDur: 6500, duration: 6500 };
           }
           // 吸血鬼獲勝：動作行含「吸血鬼降臨」（出牌者打出吸血鬼，或賞金獵人公開了目標的吸血鬼）
           const vampireSource = action.includes('吸血鬼降臨') && orderedPlayers.find(p => action.startsWith(`${p.name} `));
@@ -671,9 +725,10 @@
         }
         function FxStamp({ tone, text, delay = 1.5 }) {
           if (!text) return null;
+          // z 極高：避免被中間牌／頭像的 transform 動畫蓋住
           return (
             <div
-              className={`absolute left-1/2 top-1/2 z-10 px-2 py-0.5 border-[3px] rounded-md font-black text-base tracking-widest whitespace-nowrap bg-slate-950/70 pointer-events-none ${FX_STAMP_CLS[tone] || FX_STAMP_CLS.ok}`}
+              className={`absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 z-[999] px-2 py-0.5 border-[3px] rounded-md font-black text-base tracking-widest whitespace-nowrap bg-slate-950/80 pointer-events-none shadow-[0_4px_20px_rgba(0,0,0,.55)] ${FX_STAMP_CLS[tone] || FX_STAMP_CLS.ok}`}
               style={{ animation: `fxStamp .35s ease-out ${delay}s both` }}
             >{text}</div>
           );
@@ -955,7 +1010,7 @@
                 ? a2(side === 'L' ? 'fxKnockL' : 'fxKnockR', 0.5, 1.35, 'ease-out')
                 : a2('fxShake', 0.5, 1.35);
               return (
-                <div className="flex flex-col items-center gap-1.5" style={a2(side === 'L' ? 'fxClashL' : 'fxClashR', 0.6, 0.5, 'cubic-bezier(.3,1.4,.5,1)')}>
+                <div className={`flex flex-col items-center gap-1.5 relative ${isLoser ? 'z-30' : 'z-10'}`} style={a2(side === 'L' ? 'fxClashL' : 'fxClashR', 0.6, 0.5, 'cubic-bezier(.3,1.4,.5,1)')}>
                   <FxChip p={p} />
                   <div style={inner}>
                     <div className="relative w-14 aspect-[3/4]">
@@ -1224,21 +1279,23 @@
               stampAt = 0.9;
             }
             revealAt = stampAt + 0.7;
+            // 被蓋章的一側用較高 z-index：transform 動畫會各自建立 stacking context，
+            // 若與中間牌同層，後畫的牌會蓋過章；因此章所在欄必須整體高於中間牌
             const srcWrap = (
-              <div className="relative" style={an('fxInL', 0.4, 0)}>
+              <div className={`relative ${stampSrc && fx.stampText ? 'z-30' : 'z-10'}`} style={an('fxInL', 0.4, 0)}>
                 <div style={stampSrc && fx.stampText ? an('fxShake', 0.5, stampAt + 0.2) : undefined}><FxChip p={src} /></div>
                 {stampSrc && stamp(stampAt)}
               </div>
             );
             body = (
               <div className="flex flex-col items-center">
-                <div className="relative flex items-center justify-center gap-2.5">
+                <div className="relative flex items-center justify-center gap-2.5 isolate">
                   {srcWrap}
-                  <div style={an('fxPop', 0.4, 0.15)}><FxFace c={card} cls="w-14" /></div>
+                  <div className="relative z-0" style={an('fxPop', 0.4, 0.15)}><FxFace c={card} cls="w-14" /></div>
                   {tgt && tgt !== src && (
                     <>
-                      <i className="fa-solid fa-arrow-right text-amber-400 text-sm" style={an('fxFadeUp', 0.3, 0.5)}></i>
-                      <div className="relative" style={an('fxInR', 0.4, 0.6)}>
+                      <i className="fa-solid fa-arrow-right text-amber-400 text-sm relative z-0" style={an('fxFadeUp', 0.3, 0.5)}></i>
+                      <div className={`relative ${stampTgt && fx.stampText ? 'z-30' : 'z-10'}`} style={an('fxInR', 0.4, 0.6)}>
                         <div style={stampTgt && fx.stampText && fx.tone === 'out' ? an('fxShake', 0.5, stampAt + 0.2) : undefined}>
                           <FxChip p={tgt} glow={kind === 'witch' ? 'ring-4 ring-emerald-400/70' : ''} />
                         </div>
@@ -1250,7 +1307,7 @@
                     <span className="text-[10px] font-black text-slate-300" style={an('fxFadeUp', 0.3, 0.5)}>對自己</span>
                   )}
                 </div>
-                {badges && <div className="mt-3 min-h-[40px] flex items-center justify-center gap-2">{badges}</div>}
+                {badges && <div className="mt-3 min-h-[40px] flex items-center justify-center gap-2 relative z-0">{badges}</div>}
               </div>
             );
           }
@@ -1258,31 +1315,37 @@
           const reveals = (fx.reveals || []).filter(r => r && r.p);
           const showReveals = reveals.length > 0 && kind !== 'compare' && !(kind === 'bounty' && fx.revealed);
           // 非全屏動畫：點擊區向下延伸覆蓋 D 區（手牌），方便大拇指點「繼續」；動畫本體仍偏上對齊 C 區
+          // 全屏動畫統一 9:16 舞台（與牌桌同比例；寬螢幕左右黑邊）
           const fxEl = full ? (
             <div
-              className={`gufeng ${replay ? 'fx-hold' : ''} fixed inset-0 z-[100] bg-slate-950/85 backdrop-blur-sm pointer-events-auto flex justify-center items-center ${canDismiss || replay ? 'cursor-pointer' : ''}`}
+              className={`gufeng ${replay ? 'fx-hold' : ''} fixed inset-0 z-[100] bg-black pointer-events-auto flex justify-center items-center ${canDismiss || replay ? 'cursor-pointer' : ''}`}
               style={replay ? undefined : (fx.sticky ? { animation: 'fxIn .25s linear both' } : { animation: `fxIn .25s linear both, fxOut .3s linear ${Math.max(0, fx.duration + (fx.hold !== undefined ? fx.hold : fxHold(fx)) - 300) / 1000}s forwards` })}
               onClick={handleClick}
             >
-              <div ref={bodyRef} className="contents">{body}</div>
-              {showReveals && (
-                <div className="absolute inset-x-0 bottom-7 z-40 flex flex-wrap items-end justify-center gap-x-2.5 gap-y-1 px-2 pointer-events-none" style={an('fxPop', 0.4, revealAt)}>
-                  {reveals.map(r => (
-                    <div key={r.p.id} className="flex items-center gap-1.5 rounded-lg border border-fuchsia-500/50 bg-slate-950/85 px-1.5 py-1">
-                      <span className="text-[9px] font-black leading-tight text-fuchsia-300 whitespace-nowrap">{r.p.name}<br />公開手牌</span>
-                      {r.cards && r.cards.length ? r.cards.map((c, ci) => <FxFace key={ci} c={c} cls="w-11" />) : <span className="text-[9px] text-slate-400">無</span>}
-                    </div>
-                  ))}
-                </div>
-              )}
-              {replay && <span className="absolute top-4 left-2 z-50 text-[9px] font-black text-amber-300 bg-slate-900/80 border border-amber-500/40 rounded-full px-2 py-0.5 pointer-events-none">回放</span>}
-              {!isNone && (replay
-                ? <span className="absolute bottom-6 right-4 text-[10px] z-50 text-slate-500 pointer-events-none">點一下離開</span>
-                : (
-                    <span className="absolute bottom-8 inset-x-0 z-50 text-center pointer-events-none" style={{ animation: `fxIn .3s linear ${fx.duration / 1000}s both` }}>
-                      <span className="animate-pulse inline-block text-[10px] font-black text-amber-300 bg-slate-950/80 border border-amber-500/50 rounded-full px-2.5 py-0.5">👆 點一下繼續</span>
-                    </span>
-                  ))}
+              <div
+                className="relative overflow-hidden bg-black"
+                style={{ aspectRatio: '9 / 16', height: '100%', maxHeight: '100dvh', width: 'auto', maxWidth: '100vw' }}
+              >
+                <div ref={bodyRef} className="absolute inset-0">{body}</div>
+                {showReveals && (
+                  <div className="absolute inset-x-0 bottom-7 z-40 flex flex-wrap items-end justify-center gap-x-2.5 gap-y-1 px-2 pointer-events-none" style={an('fxPop', 0.4, revealAt)}>
+                    {reveals.map(r => (
+                      <div key={r.p.id} className="flex items-center gap-1.5 rounded-lg border border-fuchsia-500/50 bg-slate-950/85 px-1.5 py-1">
+                        <span className="text-[9px] font-black leading-tight text-fuchsia-300 whitespace-nowrap">{r.p.name}<br />公開手牌</span>
+                        {r.cards && r.cards.length ? r.cards.map((c, ci) => <FxFace key={ci} c={c} cls="w-11" />) : <span className="text-[9px] text-slate-400">無</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {replay && <span className="absolute top-4 left-2 z-50 text-[9px] font-black text-amber-300 bg-slate-900/80 border border-amber-500/40 rounded-full px-2 py-0.5 pointer-events-none">回放</span>}
+                {!isNone && (replay
+                  ? <span className="absolute bottom-6 right-4 text-[10px] z-50 text-slate-500 pointer-events-none">點一下離開</span>
+                  : (
+                      <span className="absolute bottom-8 inset-x-0 z-50 text-center pointer-events-none" style={{ animation: `fxIn .3s linear ${fx.duration / 1000}s both` }}>
+                        <span className="animate-pulse inline-block text-[10px] font-black text-amber-300 bg-slate-950/80 border border-amber-500/50 rounded-full px-2.5 py-0.5">👆 點一下繼續</span>
+                      </span>
+                    ))}
+              </div>
             </div>
           ) : isNone ? (
             <div className={`gufeng ${replay ? 'fx-hold' : ''} absolute inset-x-0 top-6 bottom-0 z-30 rounded-lg flex justify-center items-end pb-3 pointer-events-none`}
@@ -1990,6 +2053,8 @@
             if (screen === 'game') {
               frontAnimReadyRef.current = false;
               const t = setTimeout(() => { frontAnimReadyRef.current = true; }, 600);
+              // 進入遊戲後才開始下載終局動畫影片（彎月等），不佔首頁／大廳頻寬
+              preloadFinaleVideos().catch(() => {});
               return () => clearTimeout(t);
             }
             frontAnimReadyRef.current = false;
@@ -5242,11 +5307,11 @@
                     </div>
                   )}
 
-                  {/* E 上：其他玩家面前的牌（對齊 D：左＝下家 … 右＝上家；數值+名稱；最新一張較完整顯示） */}
+                  {/* E 上：其他玩家面前的牌（對齊 D：左＝下家 … 右＝上家；舊牌摺疊、最新一張完整顯示） */}
                   {!(gameOver && victoryDismissed) && (
                     <div className={UI.E.e05}>
                       {otherPlayersOrdered.map(player => {
-                        // 字級對齊中間出牌卡；飛入播完前用 frontHold 暫留上一版（上一張不立刻摺上）
+                        // 飛入播完前用 frontHold 暫留上一版（上一張不立刻摺上）
                         const fronts = frontHold[player.id] || getFrontCards(player);
                         const step = 14;
                         const foldedH = 22;
@@ -5262,6 +5327,8 @@
                                 const active = isCardActive(player, c);
                                 const isLatest = i === n - 1;
                                 const borderCls = UI.E.stackBorder(active);
+                                const hideKey = (c && c.id != null && c.id !== '') ? String(c.id) : `${c.title}|${c.value}|${c.icon || ''}`;
+                                const hidden = !!(frontHideKeys[hideKey] || (frontAnim && frontAnim.card && frontAnim.card.id && frontAnim.card.id === c.id));
                                 if (isLatest) {
                                   return (
                                     <button
@@ -5269,7 +5336,7 @@
                                       key={(c.id || c.title) + '-' + i}
                                       onClick={(e) => { e.stopPropagation(); setArenaFocus({ ...c, playedBy: player.name }); }}
                                       className={UI.E.e08({ borderCls })}
-                                      style={{ top: n === 1 ? 0 : step * (n - 1), width: fullW, height: fullH, zIndex: i + 1, opacity: (frontHideKeys[(c && c.id != null && c.id !== '') ? String(c.id) : `${c.title}|${c.value}|${c.icon || ''}`] || (frontAnim && frontAnim.card && frontAnim.card.id && frontAnim.card.id === c.id)) ? 0 : 1 }}
+                                      style={{ top: n === 1 ? 0 : step * (n - 1), width: fullW, height: fullH, zIndex: i + 1, opacity: hidden ? 0 : 1 }}
                                       ref={el => { if (el) frontTargetRefs.current[player.id] = el; }}
                                       title={`${c.value} ${c.title}${active ? '（生效中）' : ''}`}
                                     >
@@ -5346,26 +5413,8 @@
                           </div>
                         </div>
                       </div>
-                    ) : (playedCardArena || (recentArenaCards && recentArenaCards[0])) ? (
-                      (() => {
-                        const c = playedCardArena || recentArenaCards[0];
-                        return (
-                          <button
-                            type="button"
-                            onClick={() => setArenaFocus(c)}
-                            className={UI.E.e39}
-                            title={`${c.value} ${c.title}${c.playedBy ? ' · ' + c.playedBy : ''}`}
-                          >
-                            <div className={UI.E.e40}>
-                              <span className={UI.E.e42}>{c.value}</span>
-                              <i className={UI.E.e45({ c })}></i>
-                              <span className={UI.E.e47}>{c.title}</span>
-                              {c.playedBy ? <span className={UI.E.e48}>{c.playedBy}</span> : null}
-                            </div>
-                          </button>
-                        );
-                      })()
                     ) : (
+                      /* 中間不再常駐顯示「最近打出的牌」；出牌飛入動畫仍由 frontAnim 處理 */
                       <div className={UI.E.e49}>
                         <i className={UI.E.e50}></i>
                         等待玩家行動...
@@ -5408,32 +5457,6 @@
                       </div>
                     );
                   })()}
-
-                  {/* 點面前的牌：完整檢視（數值／圖示／名稱／說明） */}
-                  {arenaFocus && (
-                    <div className={UI.E.e58} onClick={() => setArenaFocus(null)}>
-                      <div className={UI.E.e59} onClick={e => e.stopPropagation()}>
-                        <div className={UI.E.e60}>
-                          <span className={UI.E.e61}>{arenaFocus.value}</span>
-                          {arenaFocus.isMoon && <span className={UI.E.e62}>{arenaFocus.category || '月亮'}</span>}
-                        </div>
-                        <div className={UI.E.e65}>
-                          <h3 className={UI.E.e66}>{arenaFocus.title}</h3>
-                        </div>
-                        <div className={UI.E.e63}>
-                          <i className={UI.E.e64({ arenaFocus })}></i>
-                        </div>
-                        <div className={UI.E.e72}>
-                          {arenaFocus.desc && <p className={UI.E.e67}>{arenaFocus.desc}</p>}
-                        </div>
-                        <div className={UI.E.e68}>
-                          <span className={UI.E.e69}>{arenaFocus.isMoon ? '翻開者' : '出牌者'}</span>
-                          <span className={UI.E.e70}>{arenaFocus.playedBy || ''}</span>
-                        </div>
-                        <button type="button" onClick={() => setArenaFocus(null)} className={UI.E.e71}>✕</button>
-                      </div>
-                    </div>
-                  )}
 
               {replay && replay.fx && <FxOverlay key={`r${replay.n}`} fx={replay.fx} onSkip={closeReplay} replay={{}} localPlayerId={humanPlayerId} />}
               {!replay && fx && (!fx.privateTo?.length || fx.privateTo.includes(humanPlayerId)) && !(gameOver && victoryDismissed) && (
@@ -5610,7 +5633,7 @@
                       style={myHand.length === 1 && isMyTurn && !gameOver && !actionLocked ? { animation: 'btnBlinkO 1.4s ease-in-out infinite' } : undefined}
                       className={UI.F.f63}
                     >
-                      <img src="抽.png" alt="抽一打一" className={UI.F.f63img} />
+                      <img src="photo/抽.png" alt="抽一打一" className={UI.F.f63img} />
                     </button>
                     <button
                       type="button"
@@ -5620,7 +5643,7 @@
                       style={myHand.length === 1 && isMyTurn && !gameOver && !actionLocked && centerCards.filter(Boolean).length > 0 ? { animation: 'btnBlinkO 1.4s ease-in-out infinite' } : undefined}
                       className={UI.F.f67}
                     >
-                      <img src="拿.png" alt="拿一還一" className={UI.F.f67img} />
+                      <img src="photo/拿.png" alt="拿一還一" className={UI.F.f67img} />
                     </button>
                   </div>
                 </footer>
@@ -5866,35 +5889,36 @@
                 </div>
               )}
 
-              {/* 長按放大的手牌（放開／點擊背景皆可關閉；避免 pointer 遺失時卡死） */}
-              {zoomCard && (
-                <div
-                  className="fixed inset-0 z-[75] flex items-center justify-center bg-slate-950/70 pointer-events-auto"
-                  onClick={() => setZoomCard(null)}
-                  onPointerUp={() => setZoomCard(null)}
-                >
+              {/* 點面前／長按手牌：portal 到 body，避開 #wm-stage transform，真正畫面正中、同尺寸 */}
+              {(arenaFocus || zoomCard) && ReactDOM.createPortal(
+                arenaFocus ? (
                   <div
-                    className="w-[250px] h-[360px] bg-slate-900 border-2 border-cyan-400 rounded-2xl p-4 flex flex-col justify-between shadow-[0_0_30px_rgba(6,182,212,0.5)]"
-                    onClick={e => e.stopPropagation()}
+                    className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 pointer-events-auto"
+                    onClick={() => setArenaFocus(null)}
                   >
-                    <div className="flex justify-between items-center">
-                      <span className="bg-cyan-500 text-slate-950 text-xl font-black w-10 h-10 rounded-full flex items-center justify-center gothic-num">{zoomCard.value}</span>
-                      <span className="text-[11px] text-slate-400 font-bold">{zoomCard.category}</span>
+                    <div className="relative" onClick={e => e.stopPropagation()}>
+                      <HandCardZoomFace card={arenaFocus} scale={1.85} animate />
+                      {(arenaFocus.playedBy || arenaFocus.isMoon) && (
+                        <div className="mt-2 flex justify-center items-center gap-2 text-[11px] gufeng">
+                          <span className="text-amber-400 font-bold">{arenaFocus.isMoon ? '翻開者' : '出牌者'}</span>
+                          <span className="text-slate-200 font-black">{arenaFocus.playedBy === humanPlayerName || arenaFocus.playedBy === '你' ? '你' : (arenaFocus.playedBy || '')}</span>
+                        </div>
+                      )}
+                      <button type="button" onClick={() => setArenaFocus(null)} className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-slate-800 border border-slate-600 text-slate-300 text-xs font-black">✕</button>
                     </div>
-                    <div className="w-full h-32 bg-slate-800/90 rounded-xl border border-slate-700/60 flex items-center justify-center my-2">
-                      <i className={`fa-solid ${zoomCard.icon} text-6xl text-cyan-400 filter drop-shadow`}></i>
-                    </div>
-                    <div className="text-center">
-                      <div className="text-xl font-black text-slate-100 tracking-wide">{zoomCard.title}</div>
-                      <div className="text-sm text-slate-300 leading-snug mt-2">{zoomCard.desc}</div>
-                    </div>
-                    <button
-                      type="button"
-                      className="mt-3 w-full rounded-xl border border-cyan-500/40 bg-cyan-500/10 py-2 text-xs font-black text-cyan-200"
-                      onClick={() => setZoomCard(null)}
-                    >關閉</button>
                   </div>
-                </div>
+                ) : (
+                  <div
+                    className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-950/70 pointer-events-auto"
+                    onClick={() => setZoomCard(null)}
+                    onPointerUp={() => setZoomCard(null)}
+                  >
+                    <div onClick={e => e.stopPropagation()}>
+                      <HandCardZoomFace card={zoomCard} scale={1.85} />
+                    </div>
+                  </div>
+                ),
+                document.body
               )}
 
               {/* 拖曳中的手牌（浮動，不影響版面） */}
@@ -5904,9 +5928,9 @@
                     <div className="cd-num">
                       <span className="text-white text-base font-black leading-none gothic-num [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.value}</span>
                     </div>
-                    <div className="cd-title text-[11px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.title}</div>
+                    <div className="cd-title text-[12px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.title}</div>
                     <div className="cd-icon">
-                      <i className={`fa-solid ${dragGhost.card.icon} text-4xl text-amber-400`}></i>
+                      <i className={`fa-solid ${dragGhost.card.icon} text-4xl text-[#81D8D0]`}></i>
                     </div>
                     <div className="cd-desc">
                       <div className="w-full text-center text-[8px] leading-[1.2] text-slate-200 line-clamp-4 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.desc}</div>
@@ -6028,7 +6052,33 @@
             </button>
           );
         }
+        // 手牌放大版：與手牌同 template（card-bg + cd-* + gufeng），用 scale 等比放大字體／icon
+        function HandCardZoomFace({ card, scale = 1.85, animate = false }) {
+          if (!card) return null;
+          const baseW = 130, baseH = 173;
+          return (
+            <div style={{ width: baseW * scale, height: baseH * scale }}>
+              <div
+                className={`card-bg gufeng relative w-[130px] h-[173px] bg-slate-900 shadow-2xl${animate ? ' animate-arena-focus' : ''}`}
+                style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
+              >
+                <div className="cd-num">
+                  <span className="text-white text-base font-black leading-none gothic-num [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{card.value}</span>
+                </div>
+                <div className="cd-title text-[12px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{card.title}</div>
+                <div className="cd-icon">
+                  <i className={`fa-solid ${card.icon || 'fa-circle'} text-4xl text-[#81D8D0] filter drop-shadow`}></i>
+                </div>
+                <div className="cd-desc">
+                  <div className="w-full text-center text-[8px] leading-[1.2] text-slate-200 line-clamp-4 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{card.desc}</div>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
         function PlayerPicker({ label, options, value, onChange, humanPlayerId }) {
+          const labelOf = (p) => (p && p.id === humanPlayerId) ? '你' : (p && p.name) || '';
           return (
             <div>
               <label className="block text-slate-400 mb-1">{label}</label>
@@ -6039,7 +6089,7 @@
                     return (
                       <button type="button" key={p.id} onClick={() => onChange(String(p.id))} className={`flex flex-col items-center rounded-lg border py-1.5 active:scale-95 ${sel ? 'border-emerald-400 bg-emerald-500/20 ring-2 ring-emerald-400/60' : 'border-slate-700 bg-slate-800'}`}>
                         <Avatar p={p} size="w-9 h-9" />
-                        <span className={`text-[10px] font-bold mt-0.5 truncate max-w-full px-0.5 ${p.id === humanPlayerId ? 'text-sky-300' : 'text-slate-200'}`}>{p.name}</span>
+                        <span className={`text-[10px] font-bold mt-0.5 truncate max-w-full px-0.5 ${p.id === humanPlayerId ? 'text-sky-300' : 'text-slate-200'}`}>{labelOf(p)}</span>
                       </button>
                     );
                   })}
@@ -6241,7 +6291,7 @@
                       preselectOnly && prePlayer ? (
                         <div className="flex items-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-950/30 px-2 py-1.5">
                           <LocalPlayerContext.Provider value={humanPlayerId}><FxChip p={prePlayer} size="w-9 h-9 text-base" /></LocalPlayerContext.Provider>
-                          <div className="text-[11px] font-bold text-emerald-200">目標：{prePlayer.name}（唯一可選）</div>
+                          <div className="text-[11px] font-bold text-emerald-200">目標：{prePlayer.id === humanPlayerId ? '你' : prePlayer.name}（唯一可選）</div>
                         </div>
                       ) : (
                         <PlayerPicker label="選擇復活玩家：" value={selectedTarget} onChange={setSelectedTarget} options={deadTargets} humanPlayerId={humanPlayerId} />
@@ -6253,6 +6303,7 @@
                           {pickpocketPool.map(p => {
                             const idStr = String(p.id);
                             const slot = selectedTarget === idStr ? 1 : secondaryTarget === idStr ? 2 : 0;
+                            const disp = p.id === humanPlayerId ? '你' : p.name;
                             return (
                               <button
                                 type="button"
@@ -6266,14 +6317,19 @@
                                   <span className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-emerald-500 text-[10px] font-black text-slate-950 flex items-center justify-center shadow">{slot}</span>
                                 )}
                                 <Avatar p={p} size="w-9 h-9" />
-                                <span className={`text-[10px] font-bold mt-0.5 truncate max-w-full px-0.5 ${p.id === humanPlayerId ? 'text-sky-300' : 'text-slate-200'}`}>{p.name}</span>
+                                <span className={`text-[10px] font-bold mt-0.5 truncate max-w-full px-0.5 ${p.id === humanPlayerId ? 'text-sky-300' : 'text-slate-200'}`}>{disp}</span>
                               </button>
                             );
                           })}
                         </div>
                         <div className="mt-1.5 text-[10px] text-slate-500">
                           {selectedTarget && secondaryTarget
-                            ? `已選：${players.find(p => String(p.id) === selectedTarget)?.name || '?'} ↔ ${players.find(p => String(p.id) === secondaryTarget)?.name || '?'}`
+                            ? (() => {
+                                const a = players.find(p => String(p.id) === selectedTarget);
+                                const b = players.find(p => String(p.id) === secondaryTarget);
+                                const n = (p) => (p && p.id === humanPlayerId) ? '你' : (p && p.name) || '?';
+                                return `已選：${n(a)} ↔ ${n(b)}`;
+                              })()
                             : selectedTarget
                               ? `已選第 1 位，請再選第 2 位`
                               : '請選擇兩位玩家互換手牌'}
@@ -6282,7 +6338,7 @@
                     ) : preselectOnly && prePlayer ? (
                       <div className="flex items-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-950/30 px-2 py-1.5">
                         <LocalPlayerContext.Provider value={humanPlayerId}><FxChip p={prePlayer} size="w-9 h-9 text-base" /></LocalPlayerContext.Provider>
-                        <div className="text-[11px] font-bold text-emerald-200">目標：{prePlayer.name}（唯一可選）</div>
+                        <div className="text-[11px] font-bold text-emerald-200">目標：{prePlayer.id === humanPlayerId ? '你' : prePlayer.name}（唯一可選）</div>
                       </div>
                     ) : (
                       <PlayerPicker label={modal.type === 'BOUNTY_HUNTER' ? '選擇目標（可選自己）：' : '選擇對手目標：'} value={selectedTarget} onChange={setSelectedTarget} options={modal.type === 'BOUNTY_HUNTER' ? [players.find(p => p.id === humanPlayerId), ...aliveTargets].filter(Boolean) : aliveTargets} humanPlayerId={humanPlayerId} />

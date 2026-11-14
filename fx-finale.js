@@ -62,88 +62,84 @@
         st.textContent = FX_FINALE_CSS;
         document.head.appendChild(st);
     }
-    // ---- 月亮升起（第 1～3 張月亮）＋ 狼月降臨：咬向鏡頭 ------------------
+    // ---- 月亮升起（第 1～3 張月亮）＋ 狼月降臨（皆用 9:16 影片）----------
+    // 彎.mp4 / 半.mp4 / 滿.mp4 / 狼.mp4（進遊戲後預載，見 index.html FINALE_VIDEOS）
     function moonWolf({ fx, kind, card, src, an, FxChip }) {
-        let body = null;
-        // 月亮升起：第 1 張彎月、第 2 張半月、第 3 張全月（天空一開始是黑的，月亮升起後才轉紅，狼月降臨）
-        // wolfbite：第 3 張月亮之後，有人用拿一還一／守夜人把狼人留在手上 ➔ 直接是紅月，接著只播「咬向鏡頭」
         const bite = kind === 'wolfbite';
         const ph = fx.phase || 1;
-        const red = ph >= 3;
-        const held = red && fx.wolf === 'held';
-        const tRed = bite ? 0 : 2.3; // 月亮與天空轉紅的開始時間
-        const tGlow = bite ? 0.1 : 2.6; // 紅光脈動
-        const tB = bite ? 1.3 : 3.7; // 黑幕蓋上、咬鏡頭演出開始
+        const red = ph >= 3 || bite;
+        const held = bite || (red && fx.wolf === 'held');
         const mnames = ['孤狼月亮', '嘯狼月亮', '狼人月亮'];
-        const moonSvg = (isRed, gid) => (React.createElement("svg", { width: "150", height: "150", viewBox: "0 0 100 100", style: { filter: isRed ? 'drop-shadow(0 0 18px rgba(248,113,113,.9))' : 'drop-shadow(0 0 14px rgba(253,230,138,.7))' } },
-            React.createElement("defs", null,
-                React.createElement("radialGradient", { id: `fxMnG${gid}`, cx: "40%", cy: "35%" },
-                    React.createElement("stop", { offset: "0", stopColor: isRed ? '#fee2e2' : '#fffbeb' }),
-                    React.createElement("stop", { offset: "1", stopColor: isRed ? '#f87171' : '#fcd34d' })),
-                React.createElement("mask", { id: `fxMnMask${gid}` },
-                    React.createElement("rect", { width: "100", height: "100", fill: "white" }),
-                    React.createElement("circle", { cx: "68", cy: "42", r: "38", fill: "black" }))),
-            ph === 1 && React.createElement("circle", { cx: "50", cy: "50", r: "42", fill: `url(#fxMnG${gid})`, mask: `url(#fxMnMask${gid})` }),
-            ph === 2 && (React.createElement(React.Fragment, null,
-                React.createElement("circle", { cx: "50", cy: "50", r: "42", fill: "#fde68a", opacity: ".12" }),
-                React.createElement("path", { d: "M50 8 A42 42 0 0 0 50 92 Z", fill: `url(#fxMnG${gid})` }))),
-            ph >= 3 && (React.createElement(React.Fragment, null,
-                React.createElement("circle", { cx: "50", cy: "50", r: "42", fill: `url(#fxMnG${gid})` }),
-                React.createElement("circle", { cx: "38", cy: "38", r: "7", fill: isRed ? '#7f1d1d' : '#92400e', opacity: ".14" }),
-                React.createElement("circle", { cx: "62", cy: "58", r: "9", fill: isRed ? '#7f1d1d' : '#92400e', opacity: ".12" }),
-                React.createElement("circle", { cx: "44", cy: "66", r: "5", fill: isRed ? '#7f1d1d' : '#92400e', opacity: ".12" })))));
-        const teeth = [[3, 12, 14], [17, 16, 34], [33, 13, 16], [47, 14, 18], [61, 13, 16], [77, 16, 34], [91, 12, 14]];
-        const jawSvg = (flip) => (React.createElement("svg", { viewBox: "0 0 100 60", preserveAspectRatio: "none", className: "w-full h-full", style: { transform: flip ? 'scaleY(-1)' : undefined } },
-            React.createElement("rect", { x: "0", y: "0", width: "100", height: "24", fill: "#3b0a0a" }),
-            React.createElement("rect", { x: "0", y: "0", width: "100", height: "9", fill: "#1c0505" }),
-            React.createElement("rect", { x: "0", y: "16", width: "100", height: "8", fill: "#7f1d1d" }),
-            teeth.map(([x, w, h], i) => React.createElement("polygon", { key: i, points: `${x},24 ${x + w},24 ${x + w / 2},${24 + h}`, fill: "#f5f5f4", stroke: "#a8a29e", strokeWidth: ".4" }))));
+        const map = (window.FINALE_VIDEOS) || {};
+        // 選片：狼月勝利／咬鏡頭 → 狼.mp4；否則依相位 彎／半／滿
+        let videoSrc;
+        let videoKey;
+        if (held) {
+            videoSrc = map.wolf || 'video/狼.mp4';
+            videoKey = 'wolf';
+        } else if (ph >= 3) {
+            videoSrc = map.full || 'video/滿.mp4';
+            videoKey = 'full';
+        } else if (ph === 2) {
+            videoSrc = map.half || 'video/半.mp4';
+            videoKey = 'half';
+        } else {
+            videoSrc = map.crescent || 'video/彎.mp4';
+            videoKey = 'crescent';
+        }
         const wp = fx.wolfWinner, tp = fx.traitorWinner;
-        body = (React.createElement(React.Fragment, null,
-            React.createElement("div", { className: "relative w-full h-full overflow-hidden", style: { background: red ? 'linear-gradient(#000,#04050b 70%,#0a0b14)' : 'linear-gradient(#050816,#12183a 70%,#1e2350)' } },
-                [[12, 10], [30, 28], [55, 8], [78, 22], [90, 12], [18, 48], [85, 50], [45, 36], [68, 40]].map(([x, y], i) => (React.createElement("span", { key: i, className: "absolute w-[2px] h-[2px] rounded-full bg-white", style: { left: `${x}%`, top: `${y}%`, ...an('fxFadeUp', 0.6, 0.2 + i * 0.15) } }))),
-                red && React.createElement("div", { className: "absolute inset-0", style: { background: 'linear-gradient(#1a0508,#4a0d14 70%,#2a0a0e)', animation: `fxIn ${bite ? 0.3 : 1.2}s ease ${tRed}s both` } }),
-                red && React.createElement("div", { className: "absolute inset-0", style: { background: 'radial-gradient(circle at 50% 55%, rgba(239,68,68,.35), transparent 65%)', animation: `fxIn ${bite ? 0.3 : 0.8}s ease ${tGlow}s both, fxRedPulse 1.2s ease-in-out ${tGlow + 0.8}s infinite alternate` } }),
-                React.createElement("div", { className: "absolute left-1/2 -ml-[75px] bottom-[26%]", style: bite ? an('fxIn', 0.3, 0) : an('fxMoonRise', 2.2, 0.2, 'cubic-bezier(.2,.8,.3,1)') },
-                    React.createElement("div", { className: "relative w-[150px] h-[150px]" },
-                        moonSvg(false, 'a'),
-                        red && React.createElement("div", { className: "absolute inset-0", style: { animation: `fxIn ${bite ? 0.3 : 0.9}s ease ${tRed}s both` } }, moonSvg(true, 'b')))),
-                React.createElement("svg", { className: "absolute bottom-0 left-0 w-full h-[24%]", viewBox: "0 0 270 84", preserveAspectRatio: "none" },
-                    React.createElement("path", { d: "M0 40 Q40 14 80 36 T150 30 T220 38 T270 24 L270 84 L0 84 Z", fill: "#05060f" }),
-                    React.createElement("path", { d: "M0 62 Q60 44 120 58 T270 52 L270 84 L0 84 Z", fill: "#02030a" })),
-                React.createElement("div", { className: "absolute top-[9%] inset-x-0 text-center", style: an('fxFadeUp', 0.5, 0.1) },
-                    React.createElement("div", { className: "text-xs text-slate-300 font-bold mb-1" },
-                        src ? src.name : '',
-                        " ",
-                        bite ? '手握【狼人】' : '翻開了'),
-                    React.createElement("div", { className: `text-xl font-black tracking-widest ${red ? 'text-rose-300' : 'text-amber-200'}` }, mnames[ph - 1] || card.title)),
-                React.createElement("div", { className: "absolute bottom-14 inset-x-0 flex flex-col items-center gap-1", style: an('fxPop', 0.4, bite ? 0.4 : (red ? 3.0 : 1.4)) },
-                    React.createElement("div", { className: "flex gap-1.5" }, [1, 2, 3].map(i => React.createElement("i", { key: i, className: `fa-solid fa-moon text-sm ${i <= ph ? (red ? 'text-rose-300' : 'text-amber-300') : 'text-slate-600'}` }))),
-                    React.createElement("div", { className: `text-[10px] font-black ${red ? 'text-rose-200' : 'text-slate-200'}` },
-                        "\u6708\u4EAE ",
-                        ph,
-                        "/3",
-                        red ? (fx.wolf === 'held' ? '・狼月降臨' : (fx.wolf === 'out' ? '・狼人已被淘汰，無人掌控狼月' : '・無人手握狼人')) : ''))),
-            held && (React.createElement("div", { className: "absolute inset-0 z-40 overflow-hidden bg-slate-950/75 pointer-events-none", style: { animation: `fxIn .5s linear ${tB}s both` } },
-                React.createElement("div", { className: "absolute inset-0", style: { animation: `fxShake .45s linear ${tB + 1.5}s both` } },
-                    React.createElement("div", { className: "absolute inset-0", style: { animation: `fxOut .5s linear ${tB + 2.0}s forwards` } },
-                        React.createElement("div", { className: "absolute inset-x-0 top-0 h-[58%]", style: { animation: `fxJawOpenT .5s ease-out ${tB + 0.8}s both, fxJawSlamT .16s cubic-bezier(.6,0,1,.6) ${tB + 1.35}s forwards` } }, jawSvg(false)),
-                        React.createElement("div", { className: "absolute inset-x-0 bottom-0 h-[58%]", style: { animation: `fxJawOpenB .5s ease-out ${tB + 0.8}s both, fxJawSlamB .16s cubic-bezier(.6,0,1,.6) ${tB + 1.35}s forwards` } }, jawSvg(true))),
-                    React.createElement("div", { className: "absolute inset-0 bg-white", style: { animation: `fxFlashW .2s ease-out ${tB + 1.5}s both` } }),
-                    React.createElement("div", { className: "absolute inset-0 bg-red-700", style: { animation: `fxFlood .9s ease-out ${tB + 1.5}s both` } })),
-                React.createElement("div", { className: "absolute inset-0", style: { background: 'radial-gradient(circle at 50% 50%, rgba(127,29,29,.55), #000 75%)', animation: `fxIn .6s ease ${tB + 2.1}s both` } }),
-                React.createElement("div", { className: "absolute inset-0 flex flex-col items-center justify-center gap-2", style: an('fxPop', 0.5, tB + 1.8) },
-                    React.createElement("div", { className: "text-lg font-black tracking-[0.3em] text-rose-300", style: { textShadow: '0 0 14px rgba(239,68,68,.9)' } }, "\u72FC\u6708\u964D\u81E8"),
-                    wp && React.createElement(FxChip, { p: wp, size: "w-14 h-14 text-2xl", glow: "ring-4 ring-rose-500/80" }),
-                    React.createElement("div", { className: "text-sm font-black text-rose-200" },
-                        "\uD83D\uDC3A ",
-                        wp ? wp.name : '狼人',
-                        " \u7372\u52DD"),
-                    tp && React.createElement("div", { className: "text-[11px] font-black text-fuchsia-300" },
-                        "\u53DB\u5F92\u3010",
-                        tp.name,
-                        "\u3011\u5171\u540C\u7372\u52DD"))))));
-        return body;
+
+        const titleBlock = React.createElement("div", { className: "absolute top-[9%] inset-x-0 text-center z-10 pointer-events-none", style: an('fxFadeUp', 0.5, 0.1) },
+            React.createElement("div", { className: "text-xs text-slate-300 font-bold mb-1", style: { textShadow: '0 1px 4px rgba(0,0,0,.9)' } },
+                src ? src.name : '',
+                " ",
+                bite ? '手握【狼人】' : '翻開了'),
+            React.createElement("div", { className: `text-xl font-black tracking-widest ${red ? 'text-rose-300' : 'text-amber-200'}`, style: { textShadow: '0 2px 8px rgba(0,0,0,.85)' } },
+                held ? '狼月降臨' : (mnames[ph - 1] || (card && card.title))));
+
+        const phaseBlock = React.createElement("div", { className: "absolute bottom-14 inset-x-0 flex flex-col items-center gap-1 z-10 pointer-events-none", style: an('fxPop', 0.4, held ? 0.6 : 1.2) },
+            React.createElement("div", { className: "flex gap-1.5" }, [1, 2, 3].map(i => React.createElement("i", { key: i, className: `fa-solid fa-moon text-sm ${i <= ph ? (red ? 'text-rose-300' : 'text-amber-300') : 'text-slate-600'}`, style: { filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.9))' } }))),
+            React.createElement("div", { className: `text-[10px] font-black ${red ? 'text-rose-200' : 'text-slate-200'}`, style: { textShadow: '0 1px 4px rgba(0,0,0,.9)' } },
+                "\u6708\u4EAE ",
+                ph,
+                "/3",
+                held ? '・狼月降臨' : (red ? (fx.wolf === 'out' ? '・狼人已被淘汰，無人掌控狼月' : '・無人手握狼人') : '')));
+
+        // 狼月獲勝者疊層（影片播一段後再出現）
+        const winOverlay = held ? React.createElement("div", {
+            className: "absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 pointer-events-none",
+            style: an('fxPop', 0.5, 5.0),
+        },
+            React.createElement("div", { className: "text-lg font-black tracking-[0.3em] text-rose-300", style: { textShadow: '0 0 14px rgba(239,68,68,.9)' } }, "\u72FC\u6708\u964D\u81E8"),
+            wp && React.createElement(FxChip, { p: wp, size: "w-14 h-14 text-2xl", glow: "ring-4 ring-rose-500/80" }),
+            React.createElement("div", { className: "text-sm font-black text-rose-200", style: { textShadow: '0 1px 4px rgba(0,0,0,.9)' } },
+                "\uD83D\uDC3A ",
+                wp ? wp.name : '狼人',
+                " \u7372\u52DD"),
+            tp && React.createElement("div", { className: "text-[11px] font-black text-fuchsia-300", style: { textShadow: '0 1px 4px rgba(0,0,0,.9)' } },
+                "\u53DB\u5F92\u3010",
+                tp.name,
+                "\u3011\u5171\u540C\u7372\u52DD")) : null;
+
+        // 9:16 影片本體（外層 FxOverlay 已有 9:16 框；此處填滿該框）
+        return React.createElement("div", { className: "relative w-full h-full overflow-hidden bg-black" },
+            React.createElement("video", {
+                key: videoKey + '-' + (fx.key || ''),
+                className: "absolute inset-0 w-full h-full object-cover",
+                src: videoSrc,
+                autoPlay: true,
+                muted: true,
+                playsInline: true,
+                preload: "auto",
+                onLoadedData: (e) => { try { e.currentTarget.play && e.currentTarget.play().catch(() => {}); } catch (err) {} },
+                onCanPlay: (e) => { try { e.currentTarget.play && e.currentTarget.play().catch(() => {}); } catch (err) {} },
+                'aria-hidden': true,
+            }),
+            React.createElement("div", { className: "absolute inset-x-0 bottom-0 h-28 pointer-events-none", style: { background: 'linear-gradient(transparent, rgba(0,0,0,.65))' } }),
+            React.createElement("div", { className: "absolute inset-x-0 top-0 h-24 pointer-events-none", style: { background: 'linear-gradient(rgba(0,0,0,.45), transparent)' } }),
+            titleBlock,
+            phaseBlock,
+            winOverlay);
     }
     // ---- 吸血鬼降臨 --------------------------------------------------------
     function vampire({ fx, src, an, Avatar, localPlayerId }) {
