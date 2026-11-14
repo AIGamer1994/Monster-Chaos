@@ -3,9 +3,9 @@
  * fx-finale.js — 全屏終局動畫（月亮升起／狼月咬鏡頭／吸血鬼降臨）
  *
  * 內容：
- *   1. 這三段動畫專用的 @keyframes / CSS（載入時自動注入 <head>）
- *   2. FxFinale.moonWolf(ctx)  ← kind === 'moon' | 'wolfbite'（月亮升起、狼月咬鏡頭）
- *   3. FxFinale.vampire(ctx)   ← kind === 'vampire'（吸血鬼降臨）
+ *   1. 終局動畫專用 @keyframes / CSS（載入時自動注入 <head>；舊 CSS 特效保留但不使用）
+ *   2. FxFinale.moonWolf(ctx)  ← kind === 'moon' | 'wolfbite'（彎／半／滿／狼.mp4）
+ *   3. FxFinale.vampire(ctx)   ← kind === 'vampire'（吸.mp4，4.5s）
  *
  * 載入方式（index.html，必須放在主程式 <script type="text/babel"> 之前）：
  *   <script type="text/babel" src="fx-finale.js"></script>
@@ -89,13 +89,13 @@
         }
         const wp = fx.wolfWinner, tp = fx.traitorWinner;
 
-        const titleBlock = React.createElement("div", { className: "absolute top-[9%] inset-x-0 text-center z-10 pointer-events-none", style: an('fxFadeUp', 0.5, 0.1) },
+        // 狼月／咬鏡頭不顯示頂部「手握【狼人】／狼月降臨」；一般月亮翻開仍顯示
+        const titleBlock = held ? null : React.createElement("div", { className: "absolute top-[9%] inset-x-0 text-center z-10 pointer-events-none", style: an('fxFadeUp', 0.5, 0.1) },
             React.createElement("div", { className: "text-xs text-slate-300 font-bold mb-1", style: { textShadow: '0 1px 4px rgba(0,0,0,.9)' } },
                 src ? src.name : '',
-                " ",
-                bite ? '手握【狼人】' : '翻開了'),
-            React.createElement("div", { className: `text-xl font-black tracking-widest ${red ? 'text-rose-300' : 'text-amber-200'}`, style: { textShadow: '0 2px 8px rgba(0,0,0,.85)' } },
-                held ? '狼月降臨' : (mnames[ph - 1] || (card && card.title))));
+                " 翻開了"),
+            React.createElement("div", { className: "text-xl font-black tracking-widest text-amber-200", style: { textShadow: '0 2px 8px rgba(0,0,0,.85)' } },
+                mnames[ph - 1] || (card && card.title)));
 
         const phaseBlock = React.createElement("div", { className: "absolute bottom-14 inset-x-0 flex flex-col items-center gap-1 z-10 pointer-events-none", style: an('fxPop', 0.4, held ? 0.6 : 1.2) },
             React.createElement("div", { className: "flex gap-1.5" }, [1, 2, 3].map(i => React.createElement("i", { key: i, className: `fa-solid fa-moon text-sm ${i <= ph ? (red ? 'text-rose-300' : 'text-amber-300') : 'text-slate-600'}`, style: { filter: 'drop-shadow(0 1px 2px rgba(0,0,0,.9))' } }))),
@@ -141,58 +141,47 @@
             phaseBlock,
             winOverlay);
     }
-    // ---- 吸血鬼降臨 --------------------------------------------------------
+    // ---- 吸血鬼降臨（吸.mp4，4.5s，結構對齊狼月影片）----------------
     function vampire({ fx, src, an, Avatar, localPlayerId }) {
-        let body = null;
-        // 吸血鬼降臨：黃月＋黑色城堡剪影 ➔ 蝙蝠群飛散 ➔ 血潮淹沒 ➔ 頭像兩旁展翅、標題與獲勝者
+        const map = (window.FINALE_VIDEOS) || {};
+        const videoSrc = map.vampire || 'video/吸.mp4';
+        const videoKey = 'vampire';
         const vp = src;
         const hi = fx.highCards || [];
-        const batPath = 'M0 -2 C-5 -10 -18 -11 -28 -3 C-21 -3 -17 1 -14 8 C-10 3 -5 3 0 9 C5 3 10 3 14 8 C17 1 21 -3 28 -3 C18 -11 5 -10 0 -2 Z';
-        const bats = [
-            // [ex, ey, scale, delay, duration] — 壓縮至 4.5s 總長
-            [-135, -40, 1.2, 0.85, 1.55], [120, -65, 1.0, 0.9, 1.5], [-105, 30, .9, 0.95, 1.6], [135, 15, 1.3, 1.0, 1.45],
-            [-45, -120, .9, 1.05, 1.55], [55, -105, 1.1, 1.1, 1.45], [-150, 80, .8, 1.15, 1.6], [150, 65, .85, 1.2, 1.5],
-            [-15, -80, 1.5, 1.25, 1.4], [20, 85, .7, 1.3, 1.5], [-85, -85, .9, 1.35, 1.45], [100, -20, 1.0, 1.4, 1.5],
-        ];
-        const wingPath = 'M110 50 C90 16 50 5 4 18 C24 22 34 32 38 44 C28 42 18 44 10 52 C26 54 36 62 40 74 C34 74 26 78 20 86 C38 86 54 88 70 98 C82 80 96 66 110 60 Z';
-        const wingStyle = (origin) => ({ width: 80, height: 72, flex: 'none', fill: '#0b0204', stroke: '#ef4444', strokeWidth: 1.6, filter: 'drop-shadow(0 0 8px rgba(239,68,68,.75))', transformOrigin: origin, animation: 'vpWing .7s cubic-bezier(.2,.9,.3,1.15) 3.0s both' });
-        body = (React.createElement("div", { className: "relative w-full h-full overflow-hidden", style: { background: 'linear-gradient(#070b22 0%,#141235 50%,#3a2a52 100%)' } },
-            React.createElement("div", { className: "absolute", style: { left: '50%', top: 100, width: 112, height: 112, marginLeft: -56, borderRadius: '50%', background: 'radial-gradient(circle at 38% 34%,#fffbeb 0%,#fde68a 40%,#fbbf24 78%,#d97706 100%)', boxShadow: '0 0 40px 10px rgba(251,191,36,.55), 0 0 100px 30px rgba(251,191,36,.25)', animation: 'vpMoonRise 1.3s cubic-bezier(.2,.8,.3,1) .05s both' } }),
-            React.createElement("svg", { className: "absolute bottom-0 left-0 w-full", style: { height: '26%' }, viewBox: "0 0 360 210", preserveAspectRatio: "none" },
-                React.createElement("path", { fill: "#000", d: "M0 210 V120 L22 120 L22 96 L30 80 L38 96 L38 124 L62 124 L62 104 L82 104 L82 70 L88 52 L94 70 L94 104 L118 104 L118 130 L150 130 L150 90 L160 56 L168 30 L176 56 L186 90 L186 126 L214 126 L214 98 L236 98 L236 66 L244 46 L252 66 L252 98 L276 98 L276 122 L304 122 L304 100 L322 84 L340 100 L340 124 L360 124 V210 Z" })),
-            React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { animation: 'fxOut .4s linear 2.05s both' } }, bats.map(([x, y, sc, t, d], i) => (React.createElement("div", { key: i, className: "absolute", style: { left: '50%', top: 170, width: 62, height: 25, margin: '-12px 0 0 -31px', '--ex': `${x}px`, '--ey': `${y}px`, '--s': sc, animation: `vpBatFly ${d}s cubic-bezier(.3,.1,.5,1) ${t}s both` } },
-                React.createElement("svg", { className: "vp-bat-svg", viewBox: "-30 -12 60 24" },
-                    React.createElement("path", { d: batPath })))))),
-            React.createElement("div", { className: "absolute left-0 right-0 top-0", style: { height: '112%', transform: 'translateY(-100%)', background: 'linear-gradient(#7f1d1d 0%,#991b1b 35%,#450a0a 100%)', animation: 'vpFlood 0.9s cubic-bezier(.5,.1,.3,1) 2.1s both' } },
-                React.createElement("svg", { className: "absolute left-0 w-full", style: { bottom: -1, height: 44, transform: 'translateY(42px)' }, viewBox: "0 0 360 60", preserveAspectRatio: "none" },
-                    React.createElement("path", { fill: "#450a0a", d: "M0 0 H360 V20 Q340 54 320 22 Q300 8 280 34 Q262 60 244 26 Q226 6 206 30 Q188 56 168 24 Q150 4 130 32 Q112 58 92 24 Q74 6 54 30 Q34 52 18 24 Q8 12 0 22 Z" }))),
-            React.createElement("div", { className: "absolute inset-0 pointer-events-none", style: { background: 'radial-gradient(circle at 50% 46%, transparent 30%, rgba(0,0,0,.6) 100%)' } }),
-            [[12, 2.9, 2.2], [30, 3.3, 1.9], [50, 3.0, 2.3], [68, 3.5, 2.0], [86, 3.1, 2.2]].map(([x, t, d], i) => (React.createElement("span", { key: i, className: "absolute", style: { left: `${x}%`, top: -10, width: 6, height: 10, borderRadius: '50%/65% 65% 35% 35%', background: 'linear-gradient(#ef4444,#7f1d1d)', opacity: 0, animation: `vpDrop ${d}s ease-in ${t}s infinite` } }))),
-            React.createElement("div", { className: "absolute inset-0 flex flex-col items-center justify-center gap-1.5 text-center" },
-                React.createElement("div", { style: { fontFamily: '"Noto Serif TC","Songti TC","PMingLiU",serif', fontWeight: 900, fontSize: 31, letterSpacing: '.18em', paddingLeft: '.18em', lineHeight: 1.1, background: 'linear-gradient(#fff1f2 0%,#fb7185 45%,#b91c1c 100%)', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', textShadow: 'none', filter: 'drop-shadow(0 0 10px rgba(239,68,68,.9)) drop-shadow(0 2px 0 #450a0a)', animation: 'vpTitle .75s cubic-bezier(.2,.9,.3,1) 2.5s both' } }, "\u5438\u8840\u9B3C\u964D\u81E8"),
-                React.createElement("div", { className: "flex items-center justify-center", style: { height: 76 } },
-                    React.createElement("svg", { style: { ...wingStyle('100% 50%'), marginRight: -4 }, viewBox: "0 0 112 100" },
-                        React.createElement("path", { d: wingPath })),
-                    React.createElement("div", { style: an('fxPop', 0.45, 2.9) },
-                        React.createElement("div", { className: "rounded-full", style: { animation: 'vpAvaGlow 1.0s ease-in-out 3.3s infinite alternate' } },
-                            React.createElement(Avatar, { p: vp, size: "w-16 h-16" }))),
-                    React.createElement("svg", { style: { ...wingStyle('0% 50%'), marginLeft: -4 }, viewBox: "0 0 112 100" },
-                        React.createElement("g", { transform: "matrix(-1 0 0 1 112 0)" },
-                            React.createElement("path", { d: wingPath })))),
-                React.createElement("div", { className: "text-[9px] font-bold text-rose-300", style: { letterSpacing: '.5em', paddingLeft: '.5em', ...an('fxFadeUp', 0.5, 3.2) } }, "VAMPIRE ASCENDANT"),
-                React.createElement("div", { className: "text-sm font-black text-rose-100", style: an('fxFadeUp', 0.5, 3.4) },
-                    "\uD83E\uDE78 ",
-                    React.createElement("b", { className: vp && vp.id === localPlayerId ? 'text-sky-300' : 'text-amber-200' }, vp ? vp.name : ''),
-                    " \u7372\u52DD"),
-                React.createElement("div", { className: "flex flex-wrap items-center justify-center gap-1 text-[10px] text-rose-300 px-3", style: an('fxFadeUp', 0.5, 3.6) },
-                    React.createElement("span", null, "\u9762\u524D\u96C6\u6EFF"),
-                    hi.map((c, ci) => (React.createElement("span", { key: ci, className: "inline-flex items-center gap-0.5 rounded border border-rose-500 bg-black/45 px-1 py-px font-black text-rose-100" },
-                        React.createElement("span", { className: "font-mono text-amber-200" }, c.value),
-                        c.title))),
-                    React.createElement("span", null,
-                        "7 \u4EE5\u4E0A \u00D7",
-                        hi.length)))));
-        return body;
+
+        // 獲勝者疊層（約第 3.2 秒出現，配合 4.5s 總長）；不顯示「打出了」標題、不帶血 emoji
+        const winOverlay = React.createElement("div", {
+            className: "absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 pointer-events-none",
+            style: an('fxPop', 0.5, 3.2),
+        },
+            React.createElement("div", { className: "text-lg font-black tracking-[0.3em] text-rose-300", style: { textShadow: '0 0 14px rgba(239,68,68,.9)' } }, "\u5438\u8840\u9B3C\u964D\u81E8"),
+            vp && React.createElement(Avatar, { p: vp, size: "w-16 h-16 text-3xl" }),
+            React.createElement("div", { className: "text-sm font-black text-rose-100", style: { textShadow: '0 1px 4px rgba(0,0,0,.9)' } },
+                React.createElement("b", { className: vp && vp.id === localPlayerId ? 'text-sky-300' : 'text-amber-200' }, vp ? vp.name : ''),
+                " \u7372\u52DD"),
+            hi.length > 0 && React.createElement("div", { className: "flex flex-wrap items-center justify-center gap-1 text-[10px] text-rose-300 px-3", style: an('fxFadeUp', 0.4, 3.5) },
+                React.createElement("span", null, "\u9762\u524D\u96C6\u6EFF"),
+                hi.map((c, ci) => React.createElement("span", { key: ci, className: "inline-flex items-center gap-0.5 rounded border border-rose-500 bg-black/45 px-1 py-px font-black text-rose-100" },
+                    React.createElement("span", { className: "font-mono text-amber-200" }, c.value),
+                    c.title)),
+                React.createElement("span", null, "7 \u4EE5\u4E0A \u00D7", hi.length)));
+
+        return React.createElement("div", { className: "relative w-full h-full overflow-hidden bg-black" },
+            React.createElement("video", {
+                key: videoKey + '-' + (fx.key || ''),
+                className: "absolute inset-0 w-full h-full object-cover",
+                src: videoSrc,
+                autoPlay: true,
+                muted: true,
+                playsInline: true,
+                preload: "auto",
+                onLoadedData: (e) => { try { e.currentTarget.play && e.currentTarget.play().catch(() => {}); } catch (err) {} },
+                onCanPlay: (e) => { try { e.currentTarget.play && e.currentTarget.play().catch(() => {}); } catch (err) {} },
+                'aria-hidden': true,
+            }),
+            React.createElement("div", { className: "absolute inset-x-0 bottom-0 h-28 pointer-events-none", style: { background: 'linear-gradient(transparent, rgba(0,0,0,.65))' } }),
+            React.createElement("div", { className: "absolute inset-x-0 top-0 h-24 pointer-events-none", style: { background: 'linear-gradient(rgba(0,0,0,.45), transparent)' } }),
+            winOverlay);
     }
     window.FxFinale = { moonWolf, vampire };
 })();

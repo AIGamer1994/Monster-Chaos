@@ -206,31 +206,31 @@
   // ═══════════════ A 區｜版本設定區 ═══════════════
   A: {
     // <header>
-    a01: "gufeng h-[4.5%] min-h-[32px] bg-slate-900/50 backdrop-blur border-b border-cyan-900/40 px-3 flex items-center justify-between z-[80] shrink-0",
+    a01: "gufeng h-[4.5%] min-h-[32px] bg-slate-900/50 backdrop-blur border-b border-amber-900/40 px-3 flex items-center justify-between z-[80] shrink-0",
     // <div>
     a02: "flex items-center",
-    // <span>
-    a03: "text-[10px] gothic-num font-bold text-cyan-400 tracking-tight",
+    // <span> 版本號 — 與規則同色系
+    a03: "text-[10px] gothic-num font-bold text-amber-300 tracking-tight",
     // <div>
     a04: "flex items-center space-x-1.5",
-    // <button> 「返回大廳」
-    a05: "flex items-center justify-center h-6 gap-0.5 whitespace-nowrap bg-slate-800/90 border border-slate-500/50 text-slate-300 text-[10px] font-bold px-1.5 rounded-md shadow-sm active:scale-95",
+    // <button> 「返回大廳」— 與規則同框樣式
+    a05: "flex items-center justify-center h-6 gap-0.5 whitespace-nowrap bg-slate-800/90 border border-amber-500/40 text-amber-300 text-[11px] font-bold px-2 rounded-md shadow-sm active:scale-95",
     // <i> icon:arrow-left
-    a06: "fa-solid fa-arrow-left text-[9px]",
-    // <button> 「動態」
-    a07: ({ showBroadcast }) => `flex items-center justify-center h-6 whitespace-nowrap border text-[10px] font-bold px-1.5 rounded-md shadow-sm active:scale-95 ${showBroadcast ? 'bg-emerald-500/25 border-emerald-400/70 text-emerald-200' : 'bg-slate-800/90 border-slate-600/60 text-slate-400'}`,
-    // <button>
-    a08: ({ speed, v }) => `flex items-center justify-center h-6 whitespace-nowrap border text-[10px] gothic-num font-bold px-1.5 rounded-md shadow-sm active:scale-95 ${speed === v ? 'bg-sky-500/25 border-sky-400/80 text-sky-200' : 'bg-slate-800/90 border-slate-500/50 text-slate-400'}`,
+    a06: "fa-solid fa-arrow-left text-[10px] text-amber-400",
+    // <button> 「動態」— 與規則同框；開啟時改綠強調
+    a07: ({ showBroadcast }) => `flex items-center justify-center h-6 whitespace-nowrap border text-[11px] font-bold px-2 rounded-md shadow-sm active:scale-95 ${showBroadcast ? 'bg-emerald-500/25 border-emerald-400/70 text-emerald-200' : 'bg-slate-800/90 border-amber-500/40 text-amber-300'}`,
+    // <button> 速度 — 與規則同框；選中時改天藍強調
+    a08: ({ speed, v }) => `flex items-center justify-center h-6 whitespace-nowrap border text-[11px] gothic-num font-bold px-2 rounded-md shadow-sm active:scale-95 ${speed === v ? 'bg-sky-500/25 border-sky-400/80 text-sky-200' : 'bg-slate-800/90 border-amber-500/40 text-amber-300'}`,
     // <button> 「規則」
     a09: "flex items-center justify-center h-6 gap-1 whitespace-nowrap bg-slate-800/90 border border-amber-500/40 text-amber-300 text-[11px] px-2 rounded-md shadow-sm active:scale-95",
     // <i> icon:book-open
     a10: "fa-solid fa-book-open text-amber-400 text-[10px]",
     // <span> 「規則」
     a11: "font-bold text-[10px]",
-    // <button> 「紀錄」
-    a12: "flex items-center justify-center h-6 gap-1 whitespace-nowrap bg-slate-800/90 border border-purple-500/40 text-purple-300 text-[11px] px-2 rounded-md shadow-sm active:scale-95",
+    // <button> 「紀錄」— 與規則同框樣式
+    a12: "flex items-center justify-center h-6 gap-1 whitespace-nowrap bg-slate-800/90 border border-amber-500/40 text-amber-300 text-[11px] px-2 rounded-md shadow-sm active:scale-95",
     // <i> icon:clock-rotate-left
-    a13: "fa-solid fa-clock-rotate-left text-purple-400 text-[10px]",
+    a13: "fa-solid fa-clock-rotate-left text-amber-400 text-[10px]",
     // <span> 「紀錄」
     a14: "font-bold text-[10px]",
   },
