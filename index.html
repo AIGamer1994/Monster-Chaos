@@ -183,6 +183,7 @@
         // 全屏終局影片（彎／半／滿／狼）在進遊戲後才預載，見 FINALE_VIDEOS
         const PRELOAD_ASSETS = [
           'photo/card.jpg', 'photo/cardb.jpg', 'photo/cards.jpg',
+          'photo/狼card.jpg', 'photo/吸card.jpg',
           'photo/icon1.jpg', 'photo/icon2.jpg', 'photo/icon3.jpg', 'photo/icon4.jpg', 'photo/icon5.jpg', 'photo/icon6.jpg',
           'photo/抽.png', 'photo/拿.png',
           'video/bg.mp4',
@@ -5661,7 +5662,7 @@
                                   </div>
                                 </div>
                                 <div className={UI.F.f53} style={{ animation: `fxFlipIn ${0.22 * k}s ease-out ${0.68 * k}s both` }}>
-                                  <div className={UI.F.f54} style={{ animation: `fxDrawGlow ${0.68 * k}s ease-in-out ${0.72 * k}s both` }}>
+                                  <div className={UI.F.f54({ c })} style={{ animation: `fxDrawGlow ${0.68 * k}s ease-in-out ${0.72 * k}s both` }}>
                                     <div className={UI.F.f55}>
                                       <span className={UI.F.f56}>{c.value}</span>
                                     </div>
@@ -6007,14 +6008,16 @@
               {/* 拖曳中的手牌（浮動，不影響版面） */}
               {dragGhost && (
                 <div className="fixed z-[70] pointer-events-none" style={{ left: dragGhost.x, top: dragGhost.y, transform: 'translate(-50%, -60%) rotate(-3deg) scale(0.9)' }}>
-                  <div className={`card-bg relative w-[130px] h-[173px] bg-slate-900 p-2 shadow-2xl ${dragGhost.over ? 'shadow-[0_0_22px_rgba(52,211,153,0.7)]' : ''}`}>
+                  <div className={`card-bg ${(dragGhost.card.type === 'WEREWOLF' || dragGhost.card.title === '狼人') ? 'card-bg-wolf' : (dragGhost.card.type === 'VAMPIRE' || dragGhost.card.title === '吸血鬼') ? 'card-bg-vamp' : ''} relative w-[130px] h-[173px] bg-slate-900 p-2 shadow-2xl ${dragGhost.over ? 'shadow-[0_0_22px_rgba(52,211,153,0.7)]' : ''}`}>
                     <div className="cd-num">
                       <span className="text-white text-base font-black leading-none gothic-num [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.value}</span>
                     </div>
                     <div className="cd-title text-[12px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.title}</div>
-                    <div className="cd-icon">
-                      <i className={`fa-solid ${dragGhost.card.icon} text-4xl text-[#81D8D0]`}></i>
-                    </div>
+                    {!(dragGhost.card.type === 'WEREWOLF' || dragGhost.card.type === 'VAMPIRE' || dragGhost.card.title === '狼人' || dragGhost.card.title === '吸血鬼') && (
+                      <div className="cd-icon">
+                        <i className={`fa-solid ${dragGhost.card.icon} text-4xl text-[#81D8D0]`}></i>
+                      </div>
+                    )}
                     <div className="cd-desc">
                       <div className="w-full text-center text-[8px] leading-[1.2] text-slate-200 line-clamp-4 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.desc}</div>
                     </div>
@@ -6143,22 +6146,27 @@
         function HandCardZoomFace({ card, scale = 1.85, animate = false }) {
           if (!card) return null;
           const baseW = 130, baseH = 173;
+          const isWolf = card.type === 'WEREWOLF' || card.title === '狼人';
+          const isVamp = card.type === 'VAMPIRE' || card.title === '吸血鬼';
+          const skin = isWolf ? 'card-bg-wolf' : isVamp ? 'card-bg-vamp' : '';
           return (
             <div
               className={animate ? 'animate-arena-focus' : undefined}
               style={{ width: baseW * scale, height: baseH * scale }}
             >
               <div
-                className="card-bg gufeng relative w-[130px] h-[173px] bg-slate-900 shadow-2xl"
+                className={`card-bg ${skin} gufeng relative w-[130px] h-[173px] bg-slate-900 shadow-2xl`}
                 style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
               >
                 <div className="cd-num">
                   <span className="text-white text-base font-black leading-none gothic-num [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{card.value}</span>
                 </div>
                 <div className="cd-title text-[12px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{card.title}</div>
-                <div className="cd-icon">
-                  <i className={`fa-solid ${card.icon || 'fa-circle'} text-4xl text-[#81D8D0] filter drop-shadow`}></i>
-                </div>
+                {!(isWolf || isVamp) && (
+                  <div className="cd-icon">
+                    <i className={`fa-solid ${card.icon || 'fa-circle'} text-4xl text-[#81D8D0] filter drop-shadow`}></i>
+                  </div>
+                )}
                 <div className="cd-desc">
                   <div className="w-full text-center text-[8px] leading-[1.2] text-slate-200 line-clamp-4 [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{card.desc}</div>
                 </div>
