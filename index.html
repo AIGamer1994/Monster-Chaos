@@ -286,9 +286,18 @@
                 });
               return;
             }
+            // 解碼完成才算好，降低進桌時牌背／牌面仍空白的機率
             const img = new Image();
-            img.onload = () => resolve(tick(src, true));
-            img.onerror = () => resolve(tick(src, false)); // 缺圖也算完成，不擋進房
+            img.decoding = 'async';
+            const finishImg = (ok) => resolve(tick(src, ok));
+            img.onload = () => {
+              if (typeof img.decode === 'function') {
+                img.decode().then(() => finishImg(true)).catch(() => finishImg(true));
+              } else {
+                finishImg(true);
+              }
+            };
+            img.onerror = () => finishImg(false); // 缺圖也算完成，不永久卡住
             img.src = src;
           })));
         }
@@ -1799,10 +1808,7 @@
           const createRoom = async () => {
             const name = saveDisplayName();
             if (!name) return;
-            if (!assetsReady) {
-              setLobbyError(`資源預載中（${assetsLoaded}/${assetsTotal}），請稍候再建立房間。`);
-              return;
-            }
+            // 建房／等大廳期間可繼續下載；只擋「開始遊戲／本機試玩」
             if (!firebaseUser || firebaseStatus !== 'ready') {
               setLobbyError('Firebase 尚未連線，請稍後再試。');
               return;
@@ -1834,10 +1840,7 @@
           const joinRoom = async () => {
             const name = saveDisplayName();
             if (!name) return;
-            if (!assetsReady) {
-              setLobbyError(`資源預載中（${assetsLoaded}/${assetsTotal}），請稍候再加入房間。`);
-              return;
-            }
+            // 加入房間不擋預載；資源在大廳背景繼續下
             if (!firebaseUser || firebaseStatus !== 'ready') {
               setLobbyError('Firebase 尚未連線，請稍後再試。');
               return;
@@ -5075,11 +5078,29 @@
           );
 
           if (screen !== 'game') {
-            const humans = roomData ? Object.values(roomData.players || {}).sort((a, b) => a.joinedAt - b.joinedAt) : [];
+            const humans = roomData ? Object.values(roomData.players || {}).sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0)) : [];
             const aiCount = roomData ? roomData.aiCount || 0 : 0;
             const totalPlayers = humans.length + aiCount;
             const isHost = !!(roomData && firebaseUser && roomData.hostUid === firebaseUser.uid);
             const isLobby = screen === 'lobby';
+            const roomStatus = (roomData && roomData.status) || '';
+            // 大廳狀態但房間資料尚未同步／已被清掉：避免 roomData.status 讀 null 崩潰
+            if (isLobby && !roomData) {
+              return (
+                <div className="min-h-[100dvh] w-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
+                  <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-900/90 p-5 text-center">
+                    <div className="text-3xl mb-2 animate-pulse">🌙</div>
+                    <p className="text-sm font-black text-amber-300 mb-1">正在連接房間…</p>
+                    <p className="text-[11px] text-slate-400 mb-4">若持續過久，請返回首頁再加入一次</p>
+                    {lobbyError && <p className="mb-3 text-[11px] text-rose-300">{lobbyError}</p>}
+                    <button
+                      onClick={() => { setScreen('home'); setRoomCode(''); setOnlineSession(false); setLobbyError(''); }}
+                      className="w-full rounded-xl border border-slate-600 py-2.5 text-xs font-bold text-slate-300"
+                    >返回首頁</button>
+                  </div>
+                </div>
+              );
+            }
             return (
               <div className="min-h-[100dvh] w-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
                 <div className="w-full max-w-md">
@@ -5167,7 +5188,7 @@
                             : <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>預載中 {assetsLoaded}/{assetsTotal}（圖片＋bg.mp4）</span>}
                         </div>
                         {/* AI 調整固定在名單上方，避免增減時按鈕跟著下移 */}
-                        {isHost && roomData.status === 'lobby' && (
+                        {isHost && roomStatus === 'lobby' && (
                           <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-700 p-3">
                             <div>
                               <div className="text-xs font-bold">AI 玩家</div>
@@ -5193,14 +5214,14 @@
                             </div>
                           ))}
                         </div>
-                        {isHost && roomData.status === 'lobby' && (
+                        {isHost && roomStatus === 'lobby' && (
                           <button
                             onClick={startOnlineGame}
                             disabled={!assetsReady || totalPlayers < 3 || totalPlayers > 6}
                             className="w-full mt-3 rounded-xl bg-emerald-500 py-3 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-35"
                           >{assetsReady ? '開始遊戲' : `預載中 ${assetsLoaded}/${assetsTotal}…`}</button>
                         )}
-                        {roomData.status === 'playing' && (
+                        {roomStatus === 'playing' && (
                           <div className="mt-4 space-y-2">
                             <p className="text-center text-[11px] text-amber-200 font-bold">本局進行中或已結束</p>
                             <button onClick={() => setScreen('game')} className="w-full rounded-xl bg-cyan-600 py-3 text-sm font-black text-white active:scale-95">返回牌桌</button>
@@ -5213,7 +5234,7 @@
                             ) : null}
                           </div>
                         )}
-                        {!isHost && roomData.status === 'lobby' && (
+                        {!isHost && roomStatus === 'lobby' && (
                           <p className="mt-4 text-center text-xs text-slate-400">等待房主開始遊戲…</p>
                         )}
                         <button onClick={leaveRoom} className="w-full mt-3 py-2 text-[11px] font-bold text-rose-300">離開房間</button>
