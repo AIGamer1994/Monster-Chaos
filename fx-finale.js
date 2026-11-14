@@ -105,10 +105,10 @@
                 "/3",
                 held ? '・狼月降臨' : (red ? (fx.wolf === 'out' ? '・狼人已被淘汰，無人掌控狼月' : '・無人手握狼人') : '')));
 
-        // 狼月獲勝者疊層（約第 3.2 秒出現，配合 4.5s 總長）：大頭像無紅圈、不重複顯示小名；勝利行只寫「名字 獲勝」
+        // 狼月獲勝者疊層（第 3.6 秒出現，配合 4.5s 總長）：大頭像無紅圈、不重複顯示小名；勝利行只寫「名字 獲勝」
         const winOverlay = held ? React.createElement("div", {
             className: "absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 pointer-events-none",
-            style: an('fxPop', 0.5, 3.2),
+            style: an('fxPop', 0.5, 3.6),
         },
             React.createElement("div", { className: "text-lg font-black tracking-[0.3em] text-rose-300", style: { textShadow: '0 0 14px rgba(239,68,68,.9)' } }, "\u72FC\u6708\u964D\u81E8"),
             // 只顯示大頭像，不帶名字列、不加紅圈 glow
@@ -149,7 +149,7 @@
         const vp = src;
         const hi = fx.highCards || [];
 
-        // 獲勝者疊層（約第 3.2 秒出現，配合 4.5s 總長）；不顯示「打出了」標題、不帶血 emoji
+        // 獲勝者疊層（第 3.2 秒出現，配合 4.5s 總長）；不顯示「打出了」標題、不帶血 emoji
         const winOverlay = React.createElement("div", {
             className: "absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 pointer-events-none",
             style: an('fxPop', 0.5, 3.2),
