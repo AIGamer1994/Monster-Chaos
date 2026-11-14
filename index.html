@@ -240,6 +240,10 @@
           return !!(src && finaleVideoReady[src]);
         };
 
+        // 背景影片預載後的 blob URL（進桌直接用，避免第二次向伺服器抓）
+        let cachedBgVideoSrc = 'video/bg.mp4';
+        const getBgVideoSrc = () => cachedBgVideoSrc || 'video/bg.mp4';
+
         function preloadAllAssets(onProgress) {
           let done = 0;
           const total = PRELOAD_ASSETS.length;
@@ -250,28 +254,36 @@
           };
           return Promise.all(PRELOAD_ASSETS.map((src) => new Promise((resolve) => {
             if (/\.mp4($|\?)/i.test(src)) {
-              // 背景影片：等 canplay / loadeddata，失敗也放行不擋進房
+              // 用 fetch→blob 整段進記憶體，進遊戲不再重新下載（先前 canplay 就放行，實際還在緩衝）
               let settled = false;
-              const v = document.createElement('video');
-              v.muted = true;
-              v.playsInline = true;
-              v.preload = 'auto';
-              v.setAttribute('playsinline', '');
-              v.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px;';
               const finish = (ok) => {
                 if (settled) return;
                 settled = true;
                 clearTimeout(timer);
-                try { if (v.parentNode) v.parentNode.removeChild(v); } catch (e) {}
                 resolve(tick(src, ok));
               };
-              v.addEventListener('canplay', () => finish(true), { once: true });
-              v.addEventListener('loadeddata', () => { if (v.readyState >= 2) finish(true); }, { once: true });
-              v.addEventListener('error', () => finish(false), { once: true });
-              const timer = setTimeout(() => finish(v.readyState >= 2), 20000);
-              document.body.appendChild(v);
-              v.src = src;
-              try { v.load(); } catch (e) { finish(false); }
+              const timer = setTimeout(() => finish(!!cachedBgVideoSrc && cachedBgVideoSrc !== 'video/bg.mp4'), 30000);
+              fetch(src)
+                .then(r => {
+                  if (!r.ok) throw new Error('bg fetch ' + r.status);
+                  return r.blob();
+                })
+                .then(blob => {
+                  try {
+                    if (cachedBgVideoSrc && cachedBgVideoSrc.startsWith('blob:')) {
+                      try { URL.revokeObjectURL(cachedBgVideoSrc); } catch (e) {}
+                    }
+                    cachedBgVideoSrc = URL.createObjectURL(blob);
+                  } catch (e) {
+                    cachedBgVideoSrc = src;
+                  }
+                  finish(true);
+                })
+                .catch(() => {
+                  // fetch 失敗仍退回原路徑，不永久擋進桌
+                  cachedBgVideoSrc = src;
+                  finish(false);
+                });
               return;
             }
             const img = new Image();
@@ -281,17 +293,17 @@
           })));
         }
 
-        // 牌桌背景影片（bg.mp4，循環、靜音、行內播放）；放在牌桌最底層，CSS 見 theme.js 的 .table-bg-video
+        // 牌桌背景影片：使用預載 blob（若有），進桌即可播
         function WolfBgVideo() {
           const ref = useRef(null);
+          const src = getBgVideoSrc();
           useEffect(() => {
             const v = ref.current;
             if (!v) return;
-            v.muted = true; // React 的 muted 屬性不穩定，手動設定才能保證自動播放
+            v.muted = true;
             v.defaultMuted = true;
             const tryPlay = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
             tryPlay();
-            // 省電模式／自動播放被擋時，第一次觸控後再播
             const onFirst = () => { tryPlay(); };
             window.addEventListener('pointerdown', onFirst, { once: true });
             const onVis = () => { if (!document.hidden) tryPlay(); };
@@ -300,9 +312,9 @@
               window.removeEventListener('pointerdown', onFirst);
               document.removeEventListener('visibilitychange', onVis);
             };
-          }, []);
+          }, [src]);
           return (
-            <video ref={ref} className="table-bg-video" src="video/bg.mp4"
+            <video ref={ref} className="table-bg-video" src={src} key={src}
               autoPlay muted loop playsInline preload="auto" aria-hidden="true" tabIndex={-1} />
           );
         }
@@ -1554,6 +1566,7 @@
           const [roomData, setRoomData] = useState(null);
           const [lobbyError, setLobbyError] = useState('');
           const [lobbyBusy, setLobbyBusy] = useState(false);
+          const leavingRoomRef = useRef(false); // 主動離房時略過「房間已關閉」誤報
           const [assetsLoaded, setAssetsLoaded] = useState(0);
           const [assetsTotal, setAssetsTotal] = useState(PRELOAD_ASSETS.length);
           const [assetsReady, setAssetsReady] = useState(false);
@@ -1678,8 +1691,14 @@
             const onValue = snapshot => {
               const nextRoom = snapshot.val();
               if (!nextRoom) {
+                // 自己主動離房／刪房時不當成錯誤頁
+                if (leavingRoomRef.current) {
+                  setRoomData(null);
+                  return;
+                }
                 setRoomData(null);
                 setRoomCode('');
+                setOnlineSession(false);
                 setScreen('home');
                 setLobbyError('房間已關閉或不存在。');
                 return;
@@ -1693,7 +1712,10 @@
                 setScreen('lobby');
               }
             };
-            const onError = error => setLobbyError(`房間同步失敗：${error.message}`);
+            const onError = error => {
+              if (leavingRoomRef.current) return;
+              setLobbyError(`房間同步失敗：${error.message}`);
+            };
             ref.on('value', onValue, onError);
             return () => {
               ref.off('value', onValue);
@@ -1872,6 +1894,10 @@
 
           const startOnlineGame = async () => {
             if (!roomData || roomData.hostUid !== (firebaseUser && firebaseUser.uid)) return;
+            if (!assetsReady) {
+              setLobbyError(`資源預載中（${assetsLoaded}/${assetsTotal}），完成後才能開始遊戲。`);
+              return;
+            }
             const humans = Object.values(roomData.players || {}).sort((a, b) => a.joinedAt - b.joinedAt);
             const aiCount = roomData.aiCount || 0;
             if (humans.length + aiCount < 3 || humans.length + aiCount > 6) {
@@ -1895,28 +1921,50 @@
           };
 
           const leaveRoom = async () => {
-            if (roomRef.current && firebaseUser && roomData) {
-              try {
-                const players = { ...(roomData.players || {}) };
-                delete players[firebaseUser.uid];
-                if (Object.keys(players).length === 0) {
-                  await roomRef.current.remove();
-                } else {
-                  const updates = { [`players/${firebaseUser.uid}`]: null };
-                  if (roomData.hostUid === firebaseUser.uid) {
-                    const nextHost = Object.values(players).sort((a, b) => a.joinedAt - b.joinedAt)[0];
-                    updates.hostUid = nextHost.uid;
-                  }
-                  await roomRef.current.update(updates);
+            // 主動離房：本機一定回首頁；RTDB 寫入採「盡力」且分步，避免一次 update 觸發 permission_denied
+            leavingRoomRef.current = true;
+            const code = roomCode;
+            const uid = firebaseUser && firebaseUser.uid;
+            const wasHost = !!(roomData && uid && roomData.hostUid === uid);
+            const remainingPlayers = roomData && roomData.players
+              ? Object.values(roomData.players).filter(p => p && p.uid !== uid)
+              : [];
+            try {
+              if (code && uid && window.firebase) {
+                // 1) 先只刪自己（rules 通常只允許寫自己的 players/{uid}）
+                try {
+                  await firebase.database().ref(`rooms/${code}/players/${uid}`).remove();
+                } catch (error) {
+                  console.warn('離開房間：移除自己失敗', error);
                 }
-              } catch (error) {
-                setLobbyError(`離開房間失敗：${error.message}`);
+                // 2) 房主：無人則刪房；有人則轉交 hostUid（分開寫，避免整包 update 被拒）
+                if (wasHost) {
+                  if (remainingPlayers.length === 0) {
+                    try {
+                      await firebase.database().ref(`rooms/${code}`).remove();
+                    } catch (error) {
+                      console.warn('離開房間：刪房失敗', error);
+                    }
+                  } else {
+                    const nextHost = remainingPlayers.slice().sort((a, b) => (a.joinedAt || 0) - (b.joinedAt || 0))[0];
+                    if (nextHost && nextHost.uid) {
+                      try {
+                        await firebase.database().ref(`rooms/${code}/hostUid`).set(nextHost.uid);
+                      } catch (error) {
+                        console.warn('離開房間：轉交房主失敗', error);
+                      }
+                    }
+                  }
+                }
               }
+            } finally {
+              setRoomCode('');
+              setRoomData(null);
+              setOnlineSession(false);
+              setLobbyError('');
+              setScreen('home');
+              setTimeout(() => { leavingRoomRef.current = false; }, 800);
             }
-            setRoomCode('');
-            setRoomData(null);
-            setOnlineSession(false);
-            setScreen('home');
           };
 
           // 全局遊戲狀態
@@ -5031,21 +5079,27 @@
             const aiCount = roomData ? roomData.aiCount || 0 : 0;
             const totalPlayers = humans.length + aiCount;
             const isHost = !!(roomData && firebaseUser && roomData.hostUid === firebaseUser.uid);
+            const isLobby = screen === 'lobby';
             return (
               <div className="min-h-[100dvh] w-screen bg-slate-950 text-slate-100 flex items-center justify-center p-4">
                 <div className="w-full max-w-md">
-                  <div className="text-center mb-6">
-                    <div className="text-4xl mb-2">🌙</div>
-                    <h1 className="text-3xl font-black tracking-widest text-amber-300">狼月</h1>
-                    <p className="text-xs text-slate-400 mt-1">Wolf Moon · 線上多人版</p>
-                    <p className="text-[10px] gothic-num font-bold text-cyan-400/90 mt-1.5 tracking-tight">{version}</p>
-                  </div>
-                  <div className="flex items-center justify-center gap-2 mb-5 text-[10px] font-bold">
-                    {['1 名稱／房間', '2 等待大廳', '3 遊戲'].map((label, index) => (
-                      <div key={label} className={`rounded-full px-2.5 py-1 border ${index === (screen === 'home' ? 0 : 1) ? 'border-amber-400/70 bg-amber-500/15 text-amber-200' : 'border-slate-700 text-slate-500'}`}>{label}</div>
-                    ))}
-                  </div>
-                  <div className="rounded-2xl border border-slate-700 bg-slate-900/90 p-5 shadow-2xl">
+                  {/* 首頁才顯示大標題／版本；等待大廳省空間，避免 AI 名單過長按不到開始 */}
+                  {!isLobby && (
+                    <>
+                      <div className="text-center mb-6">
+                        <div className="text-4xl mb-2">🌙</div>
+                        <h1 className="text-3xl font-black tracking-widest text-amber-300">狼月</h1>
+                        <p className="text-xs text-slate-400 mt-1">Wolf Moon · 線上多人版</p>
+                        <p className="text-[10px] gothic-num font-bold text-cyan-400/90 mt-1.5 tracking-tight">{version}</p>
+                      </div>
+                      <div className="flex items-center justify-center gap-2 mb-5 text-[10px] font-bold">
+                        {['1 名稱／房間', '2 等待大廳', '3 遊戲'].map((label, index) => (
+                          <div key={label} className={`rounded-full px-2.5 py-1 border ${index === (screen === 'home' ? 0 : 1) ? 'border-amber-400/70 bg-amber-500/15 text-amber-200' : 'border-slate-700 text-slate-500'}`}>{label}</div>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                  <div className="rounded-2xl border border-slate-700 bg-slate-900/90 p-4 shadow-2xl">
                     {screen === 'home' ? (
                       <>
                         <label className="block text-xs font-bold text-slate-300 mb-1.5" htmlFor="player-name">玩家名稱</label>
@@ -5126,21 +5180,25 @@
                             </div>
                           </div>
                         )}
-                        <div className="mt-2 space-y-2 max-h-[40vh] overflow-y-auto pr-0.5 scrollbar-none">
+                        <div className="mt-2 space-y-1.5 max-h-[28vh] overflow-y-auto pr-0.5 scrollbar-none">
                           {humans.map(person => (
-                            <div key={person.uid} className="flex items-center justify-between rounded-lg bg-slate-800/70 px-3 py-2 text-sm">
+                            <div key={person.uid} className="flex items-center justify-between rounded-lg bg-slate-800/70 px-3 py-1.5 text-sm">
                               <span className="truncate">{person.name}</span>
                               {person.uid === roomData.hostUid && <span className="ml-2 text-[10px] font-bold text-amber-300">房主</span>}
                             </div>
                           ))}
                           {Array.from({ length: aiCount }, (_, index) => (
-                            <div key={`ai-${index}`} className="flex items-center justify-between rounded-lg bg-slate-800/40 px-3 py-2 text-sm text-cyan-200">
+                            <div key={`ai-${index}`} className="flex items-center justify-between rounded-lg bg-slate-800/40 px-3 py-1.5 text-sm text-cyan-200">
                               <span>AI {index + 1}</span><span className="text-[10px]">電腦玩家</span>
                             </div>
                           ))}
                         </div>
                         {isHost && roomData.status === 'lobby' && (
-                          <button onClick={startOnlineGame} disabled={totalPlayers < 3 || totalPlayers > 6} className="w-full mt-4 rounded-xl bg-emerald-500 py-3 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-35">開始遊戲</button>
+                          <button
+                            onClick={startOnlineGame}
+                            disabled={!assetsReady || totalPlayers < 3 || totalPlayers > 6}
+                            className="w-full mt-3 rounded-xl bg-emerald-500 py-3 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-35"
+                          >{assetsReady ? '開始遊戲' : `預載中 ${assetsLoaded}/${assetsTotal}…`}</button>
                         )}
                         {roomData.status === 'playing' && (
                           <div className="mt-4 space-y-2">
@@ -5205,18 +5263,40 @@
             };
           });
 
-          // 線上模式尚未收到牌局：顯示等待，避免誤顯示預設 6 人 AI 空桌
+          // 線上模式尚未收到牌局：顯示等待（整場結束後等下一局也走這裡，勿當成 error）
           if (onlineSession && !gameReady) {
+            const waitingNext = !!(roomData && roomData.status === 'playing' && (!roomData.gameState || roomData.gameState.gameOver));
+            const nrMap = (roomData && roomData.nextReady) || {};
+            const humans = roomData ? Object.keys(roomData.players || {}) : [];
+            const readyN = humans.filter(u => nrMap[u]).length;
+            const iReady = !!(firebaseUser && nrMap[firebaseUser.uid]);
             return (
               <div className="min-h-[100dvh] h-[100dvh] w-screen flex flex-col items-center justify-center bg-slate-950 text-slate-100 p-6 text-center">
                 <div className="text-4xl mb-3 animate-pulse">🌙</div>
-                <p className="text-sm font-black text-amber-300 mb-1">正在同步牌局…</p>
-                <p className="text-[11px] text-slate-400 mb-4">等待房主發牌與狀態同步</p>
+                <p className="text-sm font-black text-amber-300 mb-1">
+                  {waitingNext ? '等待開下一局…' : '正在同步牌局…'}
+                </p>
+                <p className="text-[11px] text-slate-400 mb-2">
+                  {waitingNext ? '全員準備後由房主發牌' : '等待房主發牌與狀態同步'}
+                </p>
+                {waitingNext && humans.length > 0 && (
+                  <p className="text-[11px] text-cyan-300/90 mb-3 font-bold">準備 {readyN}/{humans.length}</p>
+                )}
                 <p className="text-[10px] gothic-num text-cyan-400/80 mb-6">{version}{roomCode ? ` · 房 ${roomCode}` : ''}</p>
+                {waitingNext && (
+                  <button
+                    onClick={handleNextGame}
+                    disabled={nextGameBusy || iReady}
+                    className="mb-3 w-full max-w-xs rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 py-3 text-sm font-black text-slate-950 disabled:cursor-not-allowed disabled:opacity-60 active:scale-95"
+                  >
+                    {nextGameBusy ? '處理中…' : iReady ? `已準備 ${readyN}/${humans.length}` : `準備新的一場（${readyN}/${humans.length}）`}
+                  </button>
+                )}
                 <button
                   onClick={() => setScreen('lobby')}
                   className="rounded-xl border border-slate-600 bg-slate-900 px-4 py-2 text-xs font-bold text-slate-300"
                 >返回大廳</button>
+                {lobbyError && <p className="mt-3 max-w-xs text-[11px] text-rose-300">{lobbyError}</p>}
               </div>
             );
           }
