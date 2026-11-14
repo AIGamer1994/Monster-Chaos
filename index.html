@@ -420,7 +420,7 @@
           '守夜人': 'watch', '保鏢': 'shield', '賞金獵人': 'bounty', '掘墓人': 'grave', '女巫': 'witch',
           '市長': 'selfout', '狼人': 'selfout',
         };
-        const FX_DURATION = { moon: 3200, guess: 2700, ask: 2500, peek: 2800, compare: 7000, swap: 2700, drunk: 4000, watch: 2700, takeone: 2700, shield: 2100, bounty: 2800, grave: 3600, witch: 2500, selfout: 2100, plain: 2200, none: 1600, place: 3200, servant: 3200, alchemist: 3600, wolfbite: 4300, vampire: 6500, match: 7200 };
+        const FX_DURATION = { moon: 3200, guess: 2700, ask: 2500, peek: 2800, compare: 7000, swap: 2700, drunk: 4000, watch: 2700, takeone: 2700, shield: 2100, bounty: 2800, grave: 3600, witch: 2500, selfout: 2100, plain: 2200, none: 1600, place: 3200, servant: 3200, alchemist: 3600, wolfbite: 4500, vampire: 4500, match: 7200 };
         // 被動牌打出時「沒有任何效果（原因）」的原因（動態廣播、行動紀錄、置於面前動畫共用）
         const PASSIVE_WHY = {
           '乞丐之王': '結算時才發動',
@@ -435,7 +435,7 @@
         const fxHold = (f) => (f && f.kind === 'place' ? 2000 : (f && f.kind === 'moon' ? 800 : 1000));
         const FX_SHOW_NONE = false; // 「無效果」小標籤動畫：目前關閉（程式保留，改 true 即恢復）
         const FX_TOTAL = 4000; // 效果動畫總長（毫秒）；內部各步驟依 baseDur 等比放慢
-        const FX_TOTAL_BY = { compare: 7000, grave: 4800, peek: 3600, place: 4000, servant: 4000, alchemist: 4200, drunk: 5000, wolfbite: 4300, vampire: 6500, match: 7200 }; // 個別動畫的總長（沒列出的用 FX_TOTAL）
+        const FX_TOTAL_BY = { compare: 7000, grave: 4800, peek: 3600, place: 4000, servant: 4000, alchemist: 4200, drunk: 5000, wolfbite: 4500, vampire: 4500, match: 7200 }; // 個別動畫的總長（沒列出的用 FX_TOTAL）
         const FX_STAMP_TEXT = { out: '淘汰', fail: '✘ 失敗', nofx: '✘ 無效', revive: '復活', spy: '間諜反殺', tie: '平手' };
         const FX_STAMP_CLS = {
           out: 'text-rose-400 border-rose-400', fail: 'text-slate-200 border-slate-400', nofx: 'text-slate-300 border-slate-500',
@@ -479,8 +479,8 @@
               wolf = wolfWinner ? 'held' : (outW ? 'out' : 'none');
               if (!wolfWinner) traitorWinner = null;
             }
-            // 月亮／狼月皆播影片：略加長時長讓影片播完（可依實際片長再調）
-            const dur = ph >= 3 ? (wolf === 'held' ? 6500 : 5200) : 5200;
+            // 月亮／狼月皆播影片：依實際片長調整（彎／半／滿 3.2s；狼月 4.5s）
+            const dur = ph >= 3 ? (wolf === 'held' ? 4500 : 3200) : 3200;
             return { key: `${Date.now()}-${Math.random()}`, kind: 'moon', card: { title: moonTitle[1], value: '🌙', icon: 'fa-moon' }, src: moonSource, tgt: null, tone: 'ok', phase: ph, wolf, wolfWinner, traitorWinner, baseDur: dur, duration: dur };
           }
           // 第 3 張月亮翻開後，有人用拿一還一／守夜人把狼人留在手上 ➔ 直接播咬鏡頭演出
@@ -491,7 +491,7 @@
             players.filter(p => p.status === '存活' && p.id !== wsrc.id).forEach(p => {
               if (((st.playerHands || {})[p.id] || []).some(c => c && c.title === '叛徒')) wtraitor = p;
             });
-            return { key: `${Date.now()}-${Math.random()}`, kind: 'wolfbite', card: { title: '狼人', value: 10, icon: 'fa-paw' }, src: wsrc, tgt: null, tone: 'ok', phase: 3, wolf: 'held', wolfWinner: wsrc, traitorWinner: wtraitor, baseDur: 6500, duration: 6500 };
+            return { key: `${Date.now()}-${Math.random()}`, kind: 'wolfbite', card: { title: '狼人', value: 10, icon: 'fa-paw' }, src: wsrc, tgt: null, tone: 'ok', phase: 3, wolf: 'held', wolfWinner: wsrc, traitorWinner: wtraitor, baseDur: 4500, duration: 4500 };
           }
           // 吸血鬼獲勝：動作行含「吸血鬼降臨」（出牌者打出吸血鬼，或賞金獵人公開了目標的吸血鬼）
           const vampireSource = action.includes('吸血鬼降臨') && orderedPlayers.find(p => action.startsWith(`${p.name} `));
