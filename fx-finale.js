@@ -64,7 +64,7 @@
     }
     // ---- 月亮升起（第 1～3 張月亮）＋ 狼月降臨（皆用 9:16 影片）----------
     // 彎.mp4 / 半.mp4 / 滿.mp4 / 狼.mp4（進遊戲後預載，見 index.html FINALE_VIDEOS）
-    function moonWolf({ fx, kind, card, src, an, FxChip }) {
+    function moonWolf({ fx, kind, card, src, an, FxChip, Avatar }) {
         const bite = kind === 'wolfbite';
         const ph = fx.phase || 1;
         const red = ph >= 3 || bite;
@@ -105,16 +105,16 @@
                 "/3",
                 held ? '・狼月降臨' : (red ? (fx.wolf === 'out' ? '・狼人已被淘汰，無人掌控狼月' : '・無人手握狼人') : '')));
 
-        // 狼月獲勝者疊層（影片播一段後再出現）
+        // 狼月獲勝者疊層（第 5 秒出現）：大頭像無紅圈、不重複顯示小名；勝利行只寫「名字 獲勝」
         const winOverlay = held ? React.createElement("div", {
-            className: "absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 pointer-events-none",
+            className: "absolute inset-0 z-20 flex flex-col items-center justify-center gap-3 pointer-events-none",
             style: an('fxPop', 0.5, 5.0),
         },
             React.createElement("div", { className: "text-lg font-black tracking-[0.3em] text-rose-300", style: { textShadow: '0 0 14px rgba(239,68,68,.9)' } }, "\u72FC\u6708\u964D\u81E8"),
-            wp && React.createElement(FxChip, { p: wp, size: "w-14 h-14 text-2xl", glow: "ring-4 ring-rose-500/80" }),
+            // 只顯示大頭像，不帶名字列、不加紅圈 glow
+            wp && React.createElement(Avatar, { p: wp, size: "w-16 h-16 text-3xl" }),
             React.createElement("div", { className: "text-sm font-black text-rose-200", style: { textShadow: '0 1px 4px rgba(0,0,0,.9)' } },
-                "\uD83D\uDC3A ",
-                wp ? wp.name : '狼人',
+                (wp ? wp.name : '狼人'),
                 " \u7372\u52DD"),
             tp && React.createElement("div", { className: "text-[11px] font-black text-fuchsia-300", style: { textShadow: '0 1px 4px rgba(0,0,0,.9)' } },
                 "\u53DB\u5F92\u3010",

@@ -896,7 +896,7 @@
               </div>
             );
           } else if (kind === 'moon' || kind === 'wolfbite') {
-            body = FxFinale.moonWolf({ fx, kind, card, src, an, FxChip });  // 月亮升起／狼月咬鏡頭 → fx-finale.js
+            body = FxFinale.moonWolf({ fx, kind, card, src, an, FxChip, Avatar });  // 月亮升起／狼月咬鏡頭 → fx-finale.js
           } else if (kind === 'vampire') {
             body = FxFinale.vampire({ fx, src, an, Avatar, localPlayerId });  // 吸血鬼降臨 → fx-finale.js
           } else if (kind === 'score') {
@@ -6045,7 +6045,8 @@
                           : '拿一還一：選 1 格暗牌拿走，再放回 1 張手牌到同一格；放回後直接結束回合。'}
                       </div>
 
-                      <div className="grid grid-cols-3 gap-3 py-1">
+                      {/* 與面前牌同 3:4；欄寬自適應，避免手機固定 120px 擠在一起 */}
+                      <div className="grid grid-cols-3 gap-2 sm:gap-3 py-1 items-start">
                         {centerMeta.map((m, i) => {
                           const card = centerCards[i];
                           const knowledge = centerKnowledge(m)[humanPlayerId];
@@ -6053,28 +6054,31 @@
                           const stale = known && knowledge.stale;
                           const selectable = centerPickMode && !!card;
                           const selected = pickSlot === i;
+                          const kc = knowledge && knowledge.card;
                           return (
-                            <div key={i} className="flex flex-col items-center">
+                            <div key={i} className="min-w-0 flex flex-col items-center">
                               <button
                                 disabled={!selectable}
                                 onClick={() => setPickSlot(i)}
-                                className={`relative w-[120px] aspect-[3/4] flex items-center justify-center p-0 bg-transparent border-0 rounded-none transition ${
+                                className={`relative w-full max-w-[100px] aspect-[3/4] flex items-center justify-center p-0 bg-transparent border-0 rounded-none transition ${
                                   selected ? 'drop-shadow-[0_0_14px_rgba(245,158,11,0.95)] ring-2 ring-amber-400' : ''
                                 } ${!card ? 'opacity-60' : ''} ${selectable ? 'cursor-pointer hover:brightness-110' : 'cursor-default'}`}
                               >
                                 {!card ? (
-                                  <span className="text-xs text-slate-400">已取走</span>
-                                ) : known ? (
-                                  <div className={`relative w-full h-full ${stale ? 'opacity-50' : ''}`}>
-                                    <FxFace c={knowledge.card} cls="w-full h-full" />
-                                    <span className="absolute bottom-1 left-0 right-0 text-center text-[9px] font-black text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">{stale ? '舊資訊' : '你看過'}</span>
+                                  <span className="text-[10px] text-slate-400">已取走</span>
+                                ) : known && kc ? (
+                                  <div className={`relative w-full h-full overflow-hidden front-card-bg bg-slate-900 flex flex-col items-center justify-center gap-0.5 px-0.5 py-1 gufeng ${stale ? 'opacity-50' : ''}`}>
+                                    <span className="gothic-num font-black text-amber-300 text-[14px] leading-none mb-0.5">{kc.value}</span>
+                                    <i className={`fa-solid ${kc.icon || 'fa-circle'} text-amber-400 text-[14px] my-0.5`}></i>
+                                    <span className="text-[11px] font-black text-amber-100 leading-tight text-center truncate w-full px-0.5">{kc.title}</span>
+                                    <span className="absolute bottom-1 left-0 right-0 text-center text-[8px] font-black text-amber-300 drop-shadow-[0_1px_2px_rgba(0,0,0,.9)]">{stale ? '舊資訊' : '你看過'}</span>
                                   </div>
                                 ) : (
                                   <FxBack cls="w-full h-full" />
                                 )}
                               </button>
-                              <span className="text-[12px] text-amber-300 font-bold mt-2">暗牌 {i + 1}</span>
-                              <div className="text-[10px] leading-tight text-center mt-0.5 space-y-0.5 w-full">
+                              <span className="text-[11px] text-amber-300 font-bold mt-1.5">暗牌 {i + 1}</span>
+                              <div className="text-[9px] leading-tight text-center mt-0.5 space-y-0.5 w-full px-0.5">
                                 {m.swappedBy.length > 0
                                   ? <div className="text-rose-300 break-words"><i className="fa-solid fa-right-left mr-0.5"></i>{m.swappedBy.map(nameOf).join('、')}</div>
                                   : <div className="text-slate-500">未被換過</div>}
