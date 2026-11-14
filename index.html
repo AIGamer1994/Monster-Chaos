@@ -46,11 +46,12 @@
             100% { opacity: 1; transform: scale(1) translateY(0) rotate(0deg); }
         }
         .animate-card-play { animation: playCardAnim 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        /* 只動外層透明度／位移，避免蓋掉內層 scale 放大 */
         @keyframes arenaFocusIn {
-          0% { opacity: 0; transform: scale(0.55) translateY(28px); }
-          100% { opacity: 1; transform: scale(1) translateY(0); }
+          0% { opacity: 0; transform: translateY(18px); }
+          100% { opacity: 1; transform: translateY(0); }
         }
-        .animate-arena-focus { animation: arenaFocusIn 1s cubic-bezier(0.22, 1, 0.36, 1) both; }
+        .animate-arena-focus { animation: arenaFocusIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
         /* 效果動畫（C 區疊層） */
         @keyframes fxIn { 0% { opacity: 0; } 100% { opacity: 1; } }
@@ -178,11 +179,13 @@
         // 牌桌固定 9:16 舞台（設計尺寸）：整個牌桌以此尺寸排版，再依視窗大小等比縮放（卡牌、文字一起縮放）
         const STAGE_W = 405, STAGE_H = 720;
         // 牌桌／頭像靜態圖：在首頁與大廳預先下載，避免對局中才載入卡很久
-        // 靜態圖：photo/ ；影片：video/
+        // 進房／進桌前必載：靜態圖 photo/ + 背景影片 video/bg.mp4
+        // 全屏終局影片（彎／半／滿／狼）在進遊戲後才預載，見 FINALE_VIDEOS
         const PRELOAD_ASSETS = [
           'photo/card.jpg', 'photo/cardb.jpg', 'photo/cards.jpg',
           'photo/icon1.jpg', 'photo/icon2.jpg', 'photo/icon3.jpg', 'photo/icon4.jpg', 'photo/icon5.jpg', 'photo/icon6.jpg',
           'photo/抽.png', 'photo/拿.png',
+          'video/bg.mp4',
         ];
         // 終局／月亮全屏動畫影片（進入遊戲頁後才開始下載，不佔首頁頻寬）
         // key 對應 fx-finale：crescent 彎月／half 半月／full 滿月／wolf 狼月
@@ -239,16 +242,40 @@
         function preloadAllAssets(onProgress) {
           let done = 0;
           const total = PRELOAD_ASSETS.length;
+          const tick = (src, ok) => {
+            done += 1;
+            if (typeof onProgress === 'function') onProgress(done, total, src);
+            return { src, ok: !!ok };
+          };
           return Promise.all(PRELOAD_ASSETS.map((src) => new Promise((resolve) => {
+            if (/\.mp4($|\?)/i.test(src)) {
+              // 背景影片：等 canplay / loadeddata，失敗也放行不擋進房
+              let settled = false;
+              const v = document.createElement('video');
+              v.muted = true;
+              v.playsInline = true;
+              v.preload = 'auto';
+              v.setAttribute('playsinline', '');
+              v.style.cssText = 'position:fixed;width:1px;height:1px;opacity:0;pointer-events:none;left:-9999px;';
+              const finish = (ok) => {
+                if (settled) return;
+                settled = true;
+                clearTimeout(timer);
+                try { if (v.parentNode) v.parentNode.removeChild(v); } catch (e) {}
+                resolve(tick(src, ok));
+              };
+              v.addEventListener('canplay', () => finish(true), { once: true });
+              v.addEventListener('loadeddata', () => { if (v.readyState >= 2) finish(true); }, { once: true });
+              v.addEventListener('error', () => finish(false), { once: true });
+              const timer = setTimeout(() => finish(v.readyState >= 2), 20000);
+              document.body.appendChild(v);
+              v.src = src;
+              try { v.load(); } catch (e) { finish(false); }
+              return;
+            }
             const img = new Image();
-            const finish = () => {
-              done += 1;
-              if (typeof onProgress === 'function') onProgress(done, total, src);
-              resolve({ src, ok: true });
-            };
-            img.onload = finish;
-            img.onerror = finish; // 缺圖也算完成，不擋進房
-            // 加 cache-bust 無用；用一般路徑讓瀏覽器快取
+            img.onload = () => resolve(tick(src, true));
+            img.onerror = () => resolve(tick(src, false)); // 缺圖也算完成，不擋進房
             img.src = src;
           })));
         }
@@ -1315,37 +1342,62 @@
           const reveals = (fx.reveals || []).filter(r => r && r.p);
           const showReveals = reveals.length > 0 && kind !== 'compare' && !(kind === 'bounty' && fx.revealed);
           // 非全屏動畫：點擊區向下延伸覆蓋 D 區（手牌），方便大拇指點「繼續」；動畫本體仍偏上對齊 C 區
-          // 全屏動畫統一 9:16 舞台（與牌桌同比例；寬螢幕左右黑邊）
+          // 影片終局（月亮／狼／吸血鬼）用 9:16 框；比點／整場勝利用畫面正中 flex（避免 absolute 飄左上）
+          const videoFull = kind === 'moon' || kind === 'wolfbite' || kind === 'vampire';
           const fxEl = full ? (
             <div
-              className={`gufeng ${replay ? 'fx-hold' : ''} fixed inset-0 z-[100] bg-black pointer-events-auto flex justify-center items-center ${canDismiss || replay ? 'cursor-pointer' : ''}`}
+              className={`gufeng ${replay ? 'fx-hold' : ''} fixed inset-0 z-[100] bg-black/90 pointer-events-auto flex justify-center items-center ${canDismiss || replay ? 'cursor-pointer' : ''}`}
               style={replay ? undefined : (fx.sticky ? { animation: 'fxIn .25s linear both' } : { animation: `fxIn .25s linear both, fxOut .3s linear ${Math.max(0, fx.duration + (fx.hold !== undefined ? fx.hold : fxHold(fx)) - 300) / 1000}s forwards` })}
               onClick={handleClick}
             >
-              <div
-                className="relative overflow-hidden bg-black"
-                style={{ aspectRatio: '9 / 16', height: '100%', maxHeight: '100dvh', width: 'auto', maxWidth: '100vw' }}
-              >
-                <div ref={bodyRef} className="absolute inset-0">{body}</div>
-                {showReveals && (
-                  <div className="absolute inset-x-0 bottom-7 z-40 flex flex-wrap items-end justify-center gap-x-2.5 gap-y-1 px-2 pointer-events-none" style={an('fxPop', 0.4, revealAt)}>
-                    {reveals.map(r => (
-                      <div key={r.p.id} className="flex items-center gap-1.5 rounded-lg border border-fuchsia-500/50 bg-slate-950/85 px-1.5 py-1">
-                        <span className="text-[9px] font-black leading-tight text-fuchsia-300 whitespace-nowrap">{r.p.name}<br />公開手牌</span>
-                        {r.cards && r.cards.length ? r.cards.map((c, ci) => <FxFace key={ci} c={c} cls="w-11" />) : <span className="text-[9px] text-slate-400">無</span>}
-                      </div>
-                    ))}
-                  </div>
-                )}
-                {replay && <span className="absolute top-4 left-2 z-50 text-[9px] font-black text-amber-300 bg-slate-900/80 border border-amber-500/40 rounded-full px-2 py-0.5 pointer-events-none">回放</span>}
-                {!isNone && (replay
-                  ? <span className="absolute bottom-6 right-4 text-[10px] z-50 text-slate-500 pointer-events-none">點一下離開</span>
-                  : (
-                      <span className="absolute bottom-8 inset-x-0 z-50 text-center pointer-events-none" style={{ animation: `fxIn .3s linear ${fx.duration / 1000}s both` }}>
-                        <span className="animate-pulse inline-block text-[10px] font-black text-amber-300 bg-slate-950/80 border border-amber-500/50 rounded-full px-2.5 py-0.5">👆 點一下繼續</span>
-                      </span>
-                    ))}
-              </div>
+              {videoFull ? (
+                <div
+                  className="relative overflow-hidden bg-black"
+                  style={{ aspectRatio: '9 / 16', height: '100%', maxHeight: '100dvh', width: 'auto', maxWidth: '100vw' }}
+                >
+                  <div ref={bodyRef} className="absolute inset-0">{body}</div>
+                  {showReveals && (
+                    <div className="absolute inset-x-0 bottom-7 z-40 flex flex-wrap items-end justify-center gap-x-2.5 gap-y-1 px-2 pointer-events-none" style={an('fxPop', 0.4, revealAt)}>
+                      {reveals.map(r => (
+                        <div key={r.p.id} className="flex items-center gap-1.5 rounded-lg border border-fuchsia-500/50 bg-slate-950/85 px-1.5 py-1">
+                          <span className="text-[9px] font-black leading-tight text-fuchsia-300 whitespace-nowrap">{r.p.name}<br />公開手牌</span>
+                          {r.cards && r.cards.length ? r.cards.map((c, ci) => <FxFace key={ci} c={c} cls="w-11" />) : <span className="text-[9px] text-slate-400">無</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {replay && <span className="absolute top-4 left-2 z-50 text-[9px] font-black text-amber-300 bg-slate-900/80 border border-amber-500/40 rounded-full px-2 py-0.5 pointer-events-none">回放</span>}
+                  {!isNone && (replay
+                    ? <span className="absolute bottom-6 right-4 text-[10px] z-50 text-slate-500 pointer-events-none">點一下離開</span>
+                    : (
+                        <span className="absolute bottom-8 inset-x-0 z-50 text-center pointer-events-none" style={{ animation: `fxIn .3s linear ${fx.duration / 1000}s both` }}>
+                          <span className="animate-pulse inline-block text-[10px] font-black text-amber-300 bg-slate-950/80 border border-amber-500/50 rounded-full px-2.5 py-0.5">👆 點一下繼續</span>
+                        </span>
+                      ))}
+                </div>
+              ) : (
+                <div className="relative w-full h-full max-w-[480px] mx-auto flex flex-col items-center justify-center px-3">
+                  <div ref={bodyRef} className="w-full flex flex-col items-center justify-center">{body}</div>
+                  {showReveals && (
+                    <div className="mt-3 flex flex-wrap items-end justify-center gap-x-2.5 gap-y-1 px-2 pointer-events-none" style={an('fxPop', 0.4, revealAt)}>
+                      {reveals.map(r => (
+                        <div key={r.p.id} className="flex items-center gap-1.5 rounded-lg border border-fuchsia-500/50 bg-slate-950/85 px-1.5 py-1">
+                          <span className="text-[9px] font-black leading-tight text-fuchsia-300 whitespace-nowrap">{r.p.name}<br />公開手牌</span>
+                          {r.cards && r.cards.length ? r.cards.map((c, ci) => <FxFace key={ci} c={c} cls="w-11" />) : <span className="text-[9px] text-slate-400">無</span>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {replay && <span className="absolute top-4 left-2 z-50 text-[9px] font-black text-amber-300 bg-slate-900/80 border border-amber-500/40 rounded-full px-2 py-0.5 pointer-events-none">回放</span>}
+                  {!isNone && (replay
+                    ? <span className="absolute bottom-6 right-4 text-[10px] z-50 text-slate-500 pointer-events-none">點一下離開</span>
+                    : (
+                        <span className="absolute bottom-8 inset-x-0 z-50 text-center pointer-events-none" style={{ animation: `fxIn .3s linear ${fx.duration / 1000}s both` }}>
+                          <span className="animate-pulse inline-block text-[10px] font-black text-amber-300 bg-slate-950/80 border border-amber-500/50 rounded-full px-2.5 py-0.5">👆 點一下繼續</span>
+                        </span>
+                      ))}
+                </div>
+              )}
             </div>
           ) : isNone ? (
             <div className={`gufeng ${replay ? 'fx-hold' : ''} absolute inset-x-0 top-6 bottom-0 z-30 rounded-lg flex justify-center items-end pb-3 pointer-events-none`}
@@ -1724,6 +1776,10 @@
           const createRoom = async () => {
             const name = saveDisplayName();
             if (!name) return;
+            if (!assetsReady) {
+              setLobbyError(`資源預載中（${assetsLoaded}/${assetsTotal}），請稍候再建立房間。`);
+              return;
+            }
             if (!firebaseUser || firebaseStatus !== 'ready') {
               setLobbyError('Firebase 尚未連線，請稍後再試。');
               return;
@@ -1755,6 +1811,10 @@
           const joinRoom = async () => {
             const name = saveDisplayName();
             if (!name) return;
+            if (!assetsReady) {
+              setLobbyError(`資源預載中（${assetsLoaded}/${assetsTotal}），請稍候再加入房間。`);
+              return;
+            }
             if (!firebaseUser || firebaseStatus !== 'ready') {
               setLobbyError('Firebase 尚未連線，請稍後再試。');
               return;
@@ -4830,28 +4890,46 @@
 
           const handleNextGame = async () => {
             // 本機試玩：一人即開始
-            if (!onlineSession || !roomData || !firebaseUser || !roomRef.current) {
+            if (!onlineSession || !roomData || !firebaseUser || !roomRef.current || !roomCode) {
               if (winnerInfo && winnerInfo.matchWinners && winnerInfo.matchWinners.length > 0) {
                 clearWinsNextRef.current = true;
                 winsRef.current = {};
                 setWins({});
               }
+              setVictoryDismissed(true);
+              setGameOver(false);
+              gameOverRef.current = false;
               initGame();
               return;
             }
             if (nextGameBusy) return;
-            // 只有本局已結束才能準備下一局（避免殘留／誤觸的準備旗標在對局中被算進去）
-            if (!(roomData.gameState && roomData.gameState.gameOver)) return;
-            // 任何仍在房間的真人（含已出局）皆可準備；只寫入自己的 nextReady/{uid}，避免非房主對整房 transaction 被 rules 拒絕
+            // 本機或遠端任一判定本局已結束即可準備（避免 gameState.gameOver 同步落後導致按了沒反應）
+            const remoteOver = !!(roomData.gameState && roomData.gameState.gameOver);
+            const localOver = !!gameOver || !!gameOverRef.current;
+            if (!remoteOver && !localOver) {
+              setBroadcastAction('本局尚未結束');
+              setBroadcastResult('➔ 請等結算完成後再準備下一場');
+              return;
+            }
             const myUid = firebaseUser.uid;
             if (!(roomData.players || {})[myUid]) {
               setLobbyError('你不在此房間，無法準備下一局。');
+              setBroadcastAction('無法準備下一局');
+              setBroadcastResult('➔ 你不在此房間玩家名單中');
               return;
             }
-            if ((roomData.nextReady || {})[myUid]) return;
+            if ((roomData.nextReady || {})[myUid]) {
+              setBroadcastAction('已準備下一場');
+              setBroadcastResult('➔ 等待其他玩家…');
+              return;
+            }
             setNextGameBusy(true);
+            setBroadcastAction('正在準備下一場…');
+            setBroadcastResult('');
             try {
               await firebase.database().ref(`rooms/${roomCode}/nextReady/${myUid}`).set(true);
+              setBroadcastAction('已準備下一場');
+              setBroadcastResult('➔ 等待其他玩家或房主開局');
             } catch (error) {
               setLobbyError(`準備下一局失敗：${error.message}`);
               setBroadcastAction('無法準備下一局');
@@ -4861,14 +4939,15 @@
             }
           };
 
-          // 殘留的「已準備」旗標：本局尚未結束（或新局已開始）時，清掉自己的旗標，避免上一局／斷線重送的準備被算進這一局
+          // 殘留的「已準備」旗標：僅在「本機與遠端都認定未結束」時清掉，避免局末同步落後把剛按的準備立刻刪掉
           useEffect(() => {
             if (!onlineSession || !roomData || !firebaseUser || !roomCode || !window.firebase) return;
             const myUid = firebaseUser.uid;
             if (!(roomData.nextReady && roomData.nextReady[myUid])) return;
             if (roomData.gameState && roomData.gameState.gameOver) return;
+            if (gameOver || gameOverRef.current) return;
             firebase.database().ref(`rooms/${roomCode}/nextReady/${myUid}`).remove().catch(() => {});
-          }, [onlineSession, roomCode, firebaseUser, roomData && roomData.nextReady, roomData && roomData.gameState && roomData.gameState.gameOver]);
+          }, [onlineSession, roomCode, firebaseUser, roomData && roomData.nextReady, roomData && roomData.gameState && roomData.gameState.gameOver, gameOver]);
 
           // 房主偵測全員準備後開新局（僅房主可寫房間根欄位 round／gameState）
           useEffect(() => {
@@ -5008,7 +5087,11 @@
                         )}
                         {firebaseStatus === 'connecting' && <p className="mt-3 text-center text-[10px] text-slate-400">正在連接 Firebase…</p>}
                         {firebaseStatus === 'error' && <p className="mt-3 text-center text-[10px] text-rose-300">Firebase 連線失敗，請檢查設定與網路。</p>}
-                        <button onClick={() => { setOnlineSession(false); setScreen('game'); }} className="w-full mt-4 py-2 text-[11px] font-bold text-slate-400 underline underline-offset-4">本機試玩（不連線）</button>
+                        <button
+                          disabled={!assetsReady}
+                          onClick={() => { if (!assetsReady) return; setOnlineSession(false); setScreen('game'); }}
+                          className="w-full mt-4 py-2 text-[11px] font-bold text-slate-400 underline underline-offset-4 disabled:opacity-40 disabled:no-underline"
+                        >{assetsReady ? '本機試玩（不連線）' : `預載中 ${assetsLoaded}/${assetsTotal}…`}</button>
                       </>
                     ) : (
                       <>
@@ -5025,8 +5108,8 @@
                         </div>
                         <div className={`mt-2 text-[10px] font-bold ${assetsReady ? 'text-emerald-400/80' : 'text-amber-300/90'}`}>
                           {assetsReady
-                            ? <span><i className="fa-solid fa-check mr-1"></i>牌面／頭像資源已就緒</span>
-                            : <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>預載資源中 {assetsLoaded}/{assetsTotal}（可邊等邊載）</span>}
+                            ? <span><i className="fa-solid fa-check mr-1"></i>圖片與背景影片已就緒</span>
+                            : <span><i className="fa-solid fa-spinner fa-spin mr-1"></i>預載中 {assetsLoaded}/{assetsTotal}（圖片＋bg.mp4）</span>}
                         </div>
                         {/* AI 調整固定在名單上方，避免增減時按鈕跟著下移 */}
                         {isHost && roomData.status === 'lobby' && (
@@ -6052,14 +6135,17 @@
             </button>
           );
         }
-        // 手牌放大版：與手牌同 template（card-bg + cd-* + gufeng），用 scale 等比放大字體／icon
+        // 手牌放大版：與手牌同 template；外層負責佔位＋進場，內層 scale 不被 animation 蓋掉
         function HandCardZoomFace({ card, scale = 1.85, animate = false }) {
           if (!card) return null;
           const baseW = 130, baseH = 173;
           return (
-            <div style={{ width: baseW * scale, height: baseH * scale }}>
+            <div
+              className={animate ? 'animate-arena-focus' : undefined}
+              style={{ width: baseW * scale, height: baseH * scale }}
+            >
               <div
-                className={`card-bg gufeng relative w-[130px] h-[173px] bg-slate-900 shadow-2xl${animate ? ' animate-arena-focus' : ''}`}
+                className="card-bg gufeng relative w-[130px] h-[173px] bg-slate-900 shadow-2xl"
                 style={{ transform: `scale(${scale})`, transformOrigin: 'top left' }}
               >
                 <div className="cd-num">
