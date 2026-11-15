@@ -85,12 +85,18 @@
     background-position: center, center;
     background-repeat: no-repeat;
   }
-  /* 狼人／吸血鬼手牌專用底圖（進房前預載 photo/狼card.jpg、photo/吸card.jpg） */
+  /* 特殊角色手牌專用底圖（進房前預載） */
   .card-bg-wolf {
     background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('photo/狼card.jpg');
   }
   .card-bg-vamp {
     background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('photo/吸card.jpg');
+  }
+  .card-bg-witch {
+    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('photo/女card.jpg');
+  }
+  .card-bg-frank {
+    background-image: linear-gradient(rgba(2,6,23,var(--ov)), rgba(2,6,23,var(--ov))), url('photo/科card.jpg');
   }
 
   /* ── 卡背圖（photo/cardb.jpg）。用在抽牌動畫牌背、C 區動畫的牌背。
@@ -606,7 +612,9 @@
     // <div>
     f39: ({ card, dragGhost, drawAnim, isSelected }) => {
       const skin = (card && (card.type === 'WEREWOLF' || card.title === '狼人')) ? 'card-bg-wolf'
-        : (card && (card.type === 'VAMPIRE' || card.title === '吸血鬼')) ? 'card-bg-vamp' : '';
+        : (card && (card.type === 'VAMPIRE' || card.title === '吸血鬼')) ? 'card-bg-vamp'
+        : (card && (card.type === 'WITCH' || card.title === '女巫')) ? 'card-bg-witch'
+        : (card && card.title === '科學怪人') ? 'card-bg-frank' : '';
       return `hand-card card-bg ${skin} relative w-[130px] h-[173px] bg-slate-900 p-2 flex flex-col justify-between shrink-0 cursor-grab active:cursor-grabbing touch-none select-none ${dragGhost && dragGhost.card.id === card.id ? 'opacity-30' : ''} ${drawAnim && drawAnim.card && drawAnim.card.id === card.id ? 'opacity-0' : ''} ${
                                   isSelected ? 'selected' : ''
                                 }`;
@@ -618,9 +626,10 @@
     // <div>
     f42: "cd-icon",
     // <i>
-    // 手牌中間圖示：Tiffany blue（狼人／吸血鬼用手牌底圖，不顯示中間 logo）
+    // 手牌中間圖示：Tiffany blue（特殊底圖角色不顯示中間 logo）
     f43: ({ card }) => {
-      if (card && (card.type === 'WEREWOLF' || card.type === 'VAMPIRE' || card.title === '狼人' || card.title === '吸血鬼')) {
+      if (card && (card.type === 'WEREWOLF' || card.type === 'VAMPIRE' || card.type === 'WITCH'
+        || card.title === '狼人' || card.title === '吸血鬼' || card.title === '女巫' || card.title === '科學怪人')) {
         return 'hidden';
       }
       return `fa-solid ${card.icon} text-4xl text-[#81D8D0] filter drop-shadow`;
@@ -650,7 +659,9 @@
     // <div>
     f54: ({ c }) => {
       const skin = (c && (c.type === 'WEREWOLF' || c.title === '狼人')) ? 'card-bg-wolf'
-        : (c && (c.type === 'VAMPIRE' || c.title === '吸血鬼')) ? 'card-bg-vamp' : '';
+        : (c && (c.type === 'VAMPIRE' || c.title === '吸血鬼')) ? 'card-bg-vamp'
+        : (c && (c.type === 'WITCH' || c.title === '女巫')) ? 'card-bg-witch'
+        : (c && c.title === '科學怪人') ? 'card-bg-frank' : '';
       return `card-bg ${skin} relative w-full h-full bg-slate-900 p-2 flex flex-col justify-between`;
     },
     // <div>
@@ -660,9 +671,10 @@
     // <div>
     f57: "cd-icon",
     // <i>
-    // 抽牌動畫圖示：與手牌同色；狼人／吸血鬼不顯示中間 logo
+    // 抽牌動畫圖示：與手牌同色；特殊底圖角色不顯示中間 logo
     f58: ({ c }) => {
-      if (c && (c.type === 'WEREWOLF' || c.type === 'VAMPIRE' || c.title === '狼人' || c.title === '吸血鬼')) {
+      if (c && (c.type === 'WEREWOLF' || c.type === 'VAMPIRE' || c.type === 'WITCH'
+        || c.title === '狼人' || c.title === '吸血鬼' || c.title === '女巫' || c.title === '科學怪人')) {
         return 'hidden';
       }
       return `fa-solid ${c.icon} text-4xl text-[#81D8D0] filter drop-shadow`;

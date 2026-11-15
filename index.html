@@ -183,7 +183,7 @@
         // 全屏終局影片（彎／半／滿／狼／吸）在進遊戲後才預載，見 FINALE_VIDEOS
         const PRELOAD_ASSETS = [
           'photo/card.jpg', 'photo/cardb.jpg', 'photo/cards.jpg',
-          'photo/狼card.jpg', 'photo/吸card.jpg',
+          'photo/狼card.jpg', 'photo/吸card.jpg', 'photo/女card.jpg', 'photo/科card.jpg',
           'photo/icon1.jpg', 'photo/icon2.jpg', 'photo/icon3.jpg', 'photo/icon4.jpg', 'photo/icon5.jpg', 'photo/icon6.jpg',
           'photo/抽.png', 'photo/拿.png',
           'video/bg.mp4',
@@ -6165,12 +6165,12 @@
               {/* 拖曳中的手牌（浮動，不影響版面） */}
               {dragGhost && (
                 <div className="fixed z-[70] pointer-events-none" style={{ left: dragGhost.x, top: dragGhost.y, transform: 'translate(-50%, -60%) rotate(-3deg) scale(0.9)' }}>
-                  <div className={`card-bg ${(dragGhost.card.type === 'WEREWOLF' || dragGhost.card.title === '狼人') ? 'card-bg-wolf' : (dragGhost.card.type === 'VAMPIRE' || dragGhost.card.title === '吸血鬼') ? 'card-bg-vamp' : ''} relative w-[130px] h-[173px] bg-slate-900 p-2 shadow-2xl ${dragGhost.over ? 'shadow-[0_0_22px_rgba(52,211,153,0.7)]' : ''}`}>
+                  <div className={`card-bg ${(dragGhost.card.type === 'WEREWOLF' || dragGhost.card.title === '狼人') ? 'card-bg-wolf' : (dragGhost.card.type === 'VAMPIRE' || dragGhost.card.title === '吸血鬼') ? 'card-bg-vamp' : (dragGhost.card.type === 'WITCH' || dragGhost.card.title === '女巫') ? 'card-bg-witch' : (dragGhost.card.title === '科學怪人') ? 'card-bg-frank' : ''} relative w-[130px] h-[173px] bg-slate-900 p-2 shadow-2xl ${dragGhost.over ? 'shadow-[0_0_22px_rgba(52,211,153,0.7)]' : ''}`}>
                     <div className="cd-num">
                       <span className="text-white text-base font-black leading-none gothic-num [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.value}</span>
                     </div>
                     <div className="cd-title text-[12px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{dragGhost.card.title}</div>
-                    {!(dragGhost.card.type === 'WEREWOLF' || dragGhost.card.type === 'VAMPIRE' || dragGhost.card.title === '狼人' || dragGhost.card.title === '吸血鬼') && (
+                    {!(dragGhost.card.type === 'WEREWOLF' || dragGhost.card.type === 'VAMPIRE' || dragGhost.card.type === 'WITCH' || dragGhost.card.title === '狼人' || dragGhost.card.title === '吸血鬼' || dragGhost.card.title === '女巫' || dragGhost.card.title === '科學怪人') && (
                       <div className="cd-icon">
                         <i className={`fa-solid ${dragGhost.card.icon} text-4xl text-[#81D8D0]`}></i>
                       </div>
@@ -6305,7 +6305,9 @@
           const baseW = 130, baseH = 173;
           const isWolf = card.type === 'WEREWOLF' || card.title === '狼人';
           const isVamp = card.type === 'VAMPIRE' || card.title === '吸血鬼';
-          const skin = isWolf ? 'card-bg-wolf' : isVamp ? 'card-bg-vamp' : '';
+          const isWitch = card.type === 'WITCH' || card.title === '女巫';
+          const isFrank = card.title === '科學怪人';
+          const skin = isWolf ? 'card-bg-wolf' : isVamp ? 'card-bg-vamp' : isWitch ? 'card-bg-witch' : isFrank ? 'card-bg-frank' : '';
           return (
             <div
               className={animate ? 'animate-arena-focus' : undefined}
@@ -6319,7 +6321,7 @@
                   <span className="text-white text-base font-black leading-none gothic-num [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{card.value}</span>
                 </div>
                 <div className="cd-title text-[12px] font-black text-slate-100 tracking-wide [text-shadow:0_1px_3px_rgba(0,0,0,.9)]">{card.title}</div>
-                {!(isWolf || isVamp) && (
+                {!(isWolf || isVamp || isWitch || isFrank) && (
                   <div className="cd-icon">
                     <i className={`fa-solid ${card.icon || 'fa-circle'} text-4xl text-[#81D8D0] filter drop-shadow`}></i>
                   </div>
